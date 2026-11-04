@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import es.jonaykb.kb_discord_auth.avatar.AvatarMarker;
 import es.jonaykb.kb_discord_auth.config.AuthConfig;
 import es.jonaykb.kb_discord_auth.config.AuthConfig.DisplayMode;
 import es.jonaykb.kb_discord_auth.config.RoleDisplay;
@@ -31,9 +32,14 @@ final class NameDecorator {
     private NameDecorator() {}
 
     static MutableComponent decorate(LinkRecord r, Map<String, GuildRole> guild, Component name, boolean forTab) {
-        List<Shown> shown = shownRoles(r.roles, guild);
+        boolean showRoles = !forTab || AuthConfig.SHOW_IN_TAB.get();
+        List<Shown> shown = showRoles ? shownRoles(r.roles, guild) : List.of();
 
         MutableComponent out = Component.empty();
+        if (forTab ? AuthConfig.AVATARS_IN_TAB.get() : AuthConfig.AVATARS_IN_CHAT.get()) {
+            MutableComponent avatar = AvatarMarker.marker(r.discordId, r.discordAvatar);
+            if (avatar != null) out.append(avatar);
+        }
         for (Shown s : shown) {
             if (!s.prefix().getString().isEmpty()) out.append(s.prefix());
         }

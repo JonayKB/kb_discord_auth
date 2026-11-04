@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -25,15 +27,19 @@ import es.jonaykb.kb_discord_auth.config.AuthConfig;
 public final class DiscordApi {
     /** Only for testing against a fake Discord: -Dkb_discord_auth.apiBase=http://127.0.0.1:18999/api/v10 */
     private static final String API = System.getProperty("kb_discord_auth.apiBase", "https://discord.com/api/v10");
-    private static final String USER_AGENT = "DiscordBot (https://github.com/JonayKB/kb_discord_auth, 1.1)";
+    private static final String USER_AGENT = "DiscordBot (https://github.com/JonayKB/kb_discord_auth, 1.2)";
 
     public record TokenResponse(String accessToken, String refreshToken, long expiresAtMillis) {}
 
-    public record DiscordUser(String id, String username, String globalName) {}
+    /** {@code avatar} is the avatar hash, null when the user has the default avatar. */
+    public record DiscordUser(String id, String username, String globalName, @Nullable String avatar) {}
 
-    /** Roles of a guild member, or {@code inGuild=false} when the user is not in the guild. */
-    public record Membership(boolean inGuild, List<String> roles) {
-        public static final Membership NOT_IN_GUILD = new Membership(false, List.of());
+    /**
+     * Roles of a guild member, or {@code inGuild=false} when the user is not in the guild.
+     * {@code avatarKnown} tells whether the response had the user, so {@code avatar} (null = default avatar) is valid.
+     */
+    public record Membership(boolean inGuild, List<String> roles, @Nullable String avatar, boolean avatarKnown) {
+        public static final Membership NOT_IN_GUILD = new Membership(false, List.of(), null, false);
     }
 
     public static final class DiscordException extends IOException {
@@ -107,7 +113,8 @@ public final class DiscordApi {
                 json.get("id").getAsString(),
                 json.get("username").getAsString(),
                 json.has("global_name") && !json.get("global_name").isJsonNull()
-                        ? json.get("global_name").getAsString() : json.get("username").getAsString());
+                        ? json.get("global_name").getAsString() : json.get("username").getAsString(),
+                stringOrNull(json, "avatar"));
     }
 
     /** Uses the bot token: GET /guilds/{guild}/members/{user}. */
@@ -145,7 +152,8 @@ public final class DiscordApi {
             JsonObject json = send(req).getAsJsonObject();
             List<String> roles = new ArrayList<>();
             json.getAsJsonArray("roles").forEach(e -> roles.add(e.getAsString()));
-            return new Membership(true, List.copyOf(roles));
+            JsonObject user = json.has("user") && json.get("user").isJsonObject() ? json.getAsJsonObject("user") : null;
+            return new Membership(true, List.copyOf(roles), user != null ? stringOrNull(user, "avatar") : null, user != null);
         } catch (DiscordException e) {
             // 404 Unknown Member / Unknown Guild: the user is not in the guild.
             if (e.status == 404) return Membership.NOT_IN_GUILD;
@@ -179,6 +187,11 @@ public final class DiscordApi {
             throw new DiscordException(res.statusCode(), truncate(res.body()));
         }
         return JsonParser.parseString(res.body());
+    }
+
+    @Nullable
+    private static String stringOrNull(JsonObject json, String key) {
+        return json.has(key) && !json.get(key).isJsonNull() ? json.get(key).getAsString() : null;
     }
 
     private static String truncate(String s) {

@@ -94,7 +94,8 @@ public final class ServerEvents {
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onTabListNameFormat(PlayerEvent.TabListNameFormat event) {
         AuthManager auth = auth();
-        if (auth == null || !AuthConfig.SHOW_IN_TAB.get() || !(event.getEntity() instanceof ServerPlayer p)) return;
+        if (auth == null || !(event.getEntity() instanceof ServerPlayer p)) return;
+        if (!AuthConfig.SHOW_IN_TAB.get() && !AuthConfig.AVATARS_IN_TAB.get()) return;
         Component base = event.getDisplayName() != null ? event.getDisplayName() : p.getName();
         Component decorated = auth.decorateName(p, base, true);
         if (decorated != null) event.setDisplayName(decorated);

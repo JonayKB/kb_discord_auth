@@ -282,6 +282,7 @@ public final class AuthManager {
         r.discordId = user.id();
         r.discordUsername = user.username();
         r.discordGlobalName = user.globalName();
+        r.discordAvatar = user.avatar();
         if (AuthConfig.useBot()) {
             r.accessToken = null;
             r.refreshToken = null;
@@ -371,6 +372,7 @@ public final class AuthManager {
         if (!sync.ok() || sync.membership() == null) return;
         r.inGuild = sync.membership().inGuild();
         r.roles = new ArrayList<>(sync.membership().roles());
+        if (sync.membership().avatarKnown()) r.discordAvatar = sync.membership().avatar();
         r.rolesSyncedAt = System.currentTimeMillis();
         TokenResponse t = sync.tokens();
         if (t != null) {

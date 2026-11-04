@@ -39,6 +39,8 @@ public final class LinkStore {
         public String discordId;
         public String discordUsername;
         public String discordGlobalName;
+        /** Discord avatar hash; null = default avatar. */
+        public String discordAvatar;
         public boolean inGuild;
         public List<String> roles = new ArrayList<>();
         /** SHA-256 of the session token stored by the player's client. */

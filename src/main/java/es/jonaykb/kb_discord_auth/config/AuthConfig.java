@@ -42,6 +42,8 @@ public final class AuthConfig {
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ROLE_DISPLAY;
     public static final ForgeConfigSpec.ConfigValue<String> HOVER_FORMAT;
     public static final ForgeConfigSpec.BooleanValue SHOW_IN_TAB;
+    public static final ForgeConfigSpec.BooleanValue AVATARS_IN_CHAT;
+    public static final ForgeConfigSpec.BooleanValue AVATARS_IN_TAB;
 
     public static final ForgeConfigSpec.ConfigValue<String> MSG_LOGGED_IN;
     public static final ForgeConfigSpec.ConfigValue<String> MSG_KICK_TIMEOUT;
@@ -133,6 +135,10 @@ public final class AuthConfig {
                 .define("hoverFormat", "&9Discord: &f@{username}");
         SHOW_IN_TAB = b.comment("Also show the role prefix and color in the tab list.")
                 .define("showInTab", true);
+        AVATARS_IN_CHAT = b.comment("Show the player's Discord profile picture left of their name in chat.")
+                .define("avatarsInChat", true);
+        AVATARS_IN_TAB = b.comment("Show the Discord profile picture in the tab list, left of the skin head.")
+                .define("avatarsInTab", true);
         b.pop();
 
         b.comment("Messages (& color codes; {username} = Discord username)").push("messages");

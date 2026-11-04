@@ -6,6 +6,7 @@ Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión c
 - **Solo la primera vez.** Tras vincular la cuenta, el servidor le da al cliente un token secreto. En las siguientes entradas se envía solo y no hace falta abrir el navegador. Sirve también en servidores no premium (`online-mode=false`): sin el token, quien use el nombre de otro tiene que iniciar sesión con el Discord de esa cuenta.
 - **Roles en el chat y en el tab (solo visual).** Se toman de Discord con su nombre, color y orden. Se puede mostrar solo el más alto o todos, y excluir roles.
 - **Hover en el chat.** Al pasar el ratón por el nombre se ve el `@` de Discord.
+- **Foto de perfil de Discord** redonda a la izquierda del nombre en el chat, y en el tab delante de la cabeza de la skin.
 - **Rol obligatorio.** Sin alguno de los roles configurados no se entra.
 - **Plaza reservada.** Un rol puede entrar aunque el servidor esté lleno.
 
@@ -59,11 +60,15 @@ roles = [
 ]
 hoverFormat = "&9Discord: &f@{username}\\n&7Roles: &f{roles}"
 showInTab = true
+avatarsInChat = true              # foto de Discord a la izquierda del nombre en el chat
+avatarsInTab = true               # foto de Discord en el tab, delante de la cabeza de la skin
 ```
 
 El nombre toma el color del rol más alto que se muestre y tenga color, como en Discord. Los roles de Discord se vuelven a leer al arrancar, cada `roleSyncMinutes` y con `/discordauth resync`, así que si cambias el nombre o el color de un rol en Discord se actualiza solo.
 
 Sin `botToken` (o con `automaticRoles = false`) solo se ven los roles de la lista `roles`, en el orden de la lista.
+
+Cada cliente descarga las fotos de perfil directamente de `cdn.discordapp.com`. Si alguien no tiene foto, o no carga, se ve el avatar por defecto de Discord. La foto se actualiza con cada sincronización de roles. En los servidores no premium (`online-mode=false`) Minecraft no dibuja las cabezas en el tab, así que ahí solo se ve la foto de Discord.
 
 Los mensajes de expulsión también están en el TOML (`[messages]`). El archivo es `COMMON` y no se envía a los clientes, así que los secretos se quedan en el servidor.
 
@@ -99,6 +104,7 @@ entra ─► pantalla de login ─► el cliente envía su token guardado
 - **Plaza reservada en modo offline.** Cuando el servidor está lleno, la decisión se toma antes de recibir el token, solo por el nombre y con los roles guardados. Alguien que use el nombre de un jugador con plaza reservada ocuparía una plaza hasta que se le expulse por no iniciar sesión (`loginTimeoutSeconds`).
 - **Sin bot**, los refresh tokens de Discord se guardan en claro en `links.json`. Con `botToken` no se guarda ninguno.
 - En mundos de un jugador o LAN está desactivado (`enableInSingleplayer`).
+- La foto de perfil solo se dibuja en el chat y en el tab. En otros sitios donde Minecraft muestra el nombre, como la pantalla de muerte, queda un hueco pequeño delante del nombre, y en la consola del servidor, un espacio.
 
 ## Desarrollo
 
@@ -108,7 +114,7 @@ entra ─► pantalla de login ─► el cliente envía su token guardado
 ./gradlew runClient    # carpeta run-client/ (separada para no pisar la config del servidor)
 ```
 
-Para probar sin Discord real, arranca el servidor con `-Dkb_discord_auth.apiBase=http://127.0.0.1:PUERTO/api/v10` apuntando a una API falsa.
+Para probar sin Discord real, arranca el servidor con `-Dkb_discord_auth.apiBase=http://127.0.0.1:PUERTO/api/v10` apuntando a una API falsa, y el cliente con `-Dkb_discord_auth.cdnBase=http://127.0.0.1:PUERTO` para las fotos.
 
 ## Licencia
 

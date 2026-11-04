@@ -12,5 +12,10 @@
   },
   "server": [
     "DedicatedPlayerListMixin"
+  ],
+  "client": [
+    "client.FontMixin",
+    "client.ChatComponentMixin",
+    "client.PlayerTabOverlayMixin"
   ]
 }
