@@ -13,12 +13,16 @@ import net.minecraft.client.Minecraft;
 public final class ClientAuth {
     enum Mode { NONE, CHECKING, LOGIN }
 
+    /** While checking a saved token, wait this long before showing the screen (avoids a flash on fast checks). */
+    private static final long CHECKING_GRACE_MS = 1500;
+
     private static Mode mode = Mode.NONE;
     private static String serverId;
     private static UUID playerId;
     private static String url = "";
     private static String message = "";
     private static long deadline;
+    private static long checkingSince;
 
     private ClientAuth() {}
 
@@ -37,7 +41,10 @@ public final class ClientAuth {
         mode = Mode.CHECKING;
         url = "";
         message = "";
-        show();
+        checkingSince = System.currentTimeMillis();
+        // Don't open the screen yet: if the token is valid the server answers quickly and nothing flashes.
+        // tick() opens it if the check takes longer than CHECKING_GRACE_MS.
+        refreshIfOpen();
         String token = ClientTokenStore.get(key());
         Network.CHANNEL.sendToServer(new TokenPacket(token == null ? "" : token));
     }
@@ -63,12 +70,23 @@ public final class ClientAuth {
         playerId = null;
         url = "";
         message = "";
+        checkingSince = 0;
     }
 
     /** Keeps the login screen up: if something closes it, open it again. */
     static void tick() {
         Minecraft mc = Minecraft.getInstance();
-        if (mode != Mode.NONE && mc.player != null && mc.screen == null) show();
+        if (mc.player == null || mc.screen != null) return;
+        if (mode == Mode.LOGIN) {
+            show();
+        } else if (mode == Mode.CHECKING && System.currentTimeMillis() - checkingSince >= CHECKING_GRACE_MS) {
+            show();
+        }
+    }
+
+    private static void refreshIfOpen() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen instanceof DiscordLoginScreen screen) screen.refresh();
     }
 
     private static void show() {
