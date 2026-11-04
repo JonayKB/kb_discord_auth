@@ -23,8 +23,9 @@ import es.jonaykb.kb_discord_auth.config.AuthConfig;
 
 /** Minimal blocking Discord REST client. Never call it from the server thread. */
 public final class DiscordApi {
-    private static final String API = "https://discord.com/api/v10";
-    private static final String USER_AGENT = "DiscordBot (https://github.com/JonayKB/kb_discord_auth, 1.0)";
+    /** Only for testing against a fake Discord: -Dkb_discord_auth.apiBase=http://127.0.0.1:18999/api/v10 */
+    private static final String API = System.getProperty("kb_discord_auth.apiBase", "https://discord.com/api/v10");
+    private static final String USER_AGENT = "DiscordBot (https://github.com/JonayKB/kb_discord_auth, 1.1)";
 
     public record TokenResponse(String accessToken, String refreshToken, long expiresAtMillis) {}
 
@@ -121,6 +122,22 @@ public final class DiscordApi {
         return member(base(API + "/users/@me/guilds/" + AuthConfig.GUILD_ID.get() + "/member")
                 .header("Authorization", "Bearer " + accessToken)
                 .GET().build());
+    }
+
+    /** A guild role. {@code color} is 0xRRGGBB, 0 when the role has no color. */
+    public record GuildRole(String id, String name, int color, int position) {}
+
+    /** Uses the bot token: GET /guilds/{guild}/roles. */
+    public List<GuildRole> guildRoles() throws IOException, InterruptedException {
+        List<GuildRole> out = new ArrayList<>();
+        send(base(API + "/guilds/" + AuthConfig.GUILD_ID.get() + "/roles")
+                .header("Authorization", "Bot " + AuthConfig.BOT_TOKEN.get())
+                .GET().build()).getAsJsonArray().forEach(e -> {
+                    JsonObject r = e.getAsJsonObject();
+                    out.add(new GuildRole(r.get("id").getAsString(), r.get("name").getAsString(),
+                            r.has("color") ? r.get("color").getAsInt() : 0, r.get("position").getAsInt()));
+                });
+        return out;
     }
 
     private Membership member(HttpRequest req) throws IOException, InterruptedException {

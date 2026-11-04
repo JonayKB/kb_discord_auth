@@ -31,6 +31,7 @@ import es.jonaykb.kb_discord_auth.config.RoleDisplay;
 import es.jonaykb.kb_discord_auth.discord.DiscordApi;
 import es.jonaykb.kb_discord_auth.discord.DiscordApi.DiscordException;
 import es.jonaykb.kb_discord_auth.discord.DiscordApi.DiscordUser;
+import es.jonaykb.kb_discord_auth.discord.DiscordApi.GuildRole;
 import es.jonaykb.kb_discord_auth.discord.DiscordApi.Membership;
 import es.jonaykb.kb_discord_auth.discord.DiscordApi.TokenResponse;
 import es.jonaykb.kb_discord_auth.network.AuthDonePacket;
@@ -39,8 +40,6 @@ import es.jonaykb.kb_discord_auth.network.Network;
 import es.jonaykb.kb_discord_auth.network.OpenAuthPacket;
 import es.jonaykb.kb_discord_auth.server.LinkStore.LinkRecord;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -97,6 +96,8 @@ public final class AuthManager {
     private final ExecutorService worker;
     private final SecureRandom random = new SecureRandom();
     @Nullable private CallbackServer callback;
+    /** Discord roles of the guild by id. Replaced as a whole, so it is safe to read from any thread. */
+    private volatile Map<String, GuildRole> guildRoles = Map.of();
     private long ticks;
 
     private AuthManager(MinecraftServer server) {
@@ -140,7 +141,11 @@ public final class AuthManager {
         }
         if (!AuthConfig.useBot()) {
             LOGGER.warn("No bot token configured: roles are read with each player's own Discord token (guilds.members.read).");
+            if (AuthConfig.AUTOMATIC_ROLES.get()) {
+                LOGGER.warn("automaticRoles needs botToken: only the roles listed in display.roles will be shown.");
+            }
         }
+        m.refreshGuildRoles();
     }
 
     public static void stop() {
@@ -375,8 +380,9 @@ public final class AuthManager {
         }
     }
 
-    /** Re-reads the roles of every logged-in player. Returns how many syncs were started. */
+    /** Re-reads the guild roles and the roles of every logged-in player. Returns how many player syncs were started. */
     public int resyncOnline() {
+        refreshGuildRoles();
         int started = 0;
         for (Map.Entry<UUID, Session> e : new ArrayList<>(sessions.entrySet())) {
             if (e.getValue().state != State.AUTHORIZED) continue;
@@ -455,23 +461,37 @@ public final class AuthManager {
         if (s == null || s.state != State.AUTHORIZED) return null;
         LinkRecord r = store.get(player.getUUID());
         if (r == null) return null;
+        return NameDecorator.decorate(r, guildRoles, name, forTab);
+    }
 
-        RoleDisplay display = RoleDisplay.best(r.roles);
-        MutableComponent out = Component.empty();
-        if (display != null && !display.prefix().isEmpty()) {
-            out.append(Component.literal(RoleDisplay.legacy(display.prefix())));
+    /** Re-reads the guild's roles (names, colors, order) and updates every shown name. Needs the bot. */
+    public void refreshGuildRoles() {
+        if (!AuthConfig.useBot() || !AuthConfig.AUTOMATIC_ROLES.get() || !AuthConfig.isConfigured()) return;
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                return api.guildRoles();
+            } catch (Exception e) {
+                if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                LOGGER.warn("Could not read the Discord server roles, keeping the previous ones: {}", e.toString());
+                return null;
+            }
+        }, worker).thenAcceptAsync(list -> {
+            if (list == null) return;
+            Map<String, GuildRole> roles = new HashMap<>();
+            for (GuildRole role : list) roles.put(role.id(), role);
+            guildRoles = Map.copyOf(roles);
+            refreshAllNames();
+        }, server);
+    }
+
+    private void refreshAllNames() {
+        for (Map.Entry<UUID, Session> e : sessions.entrySet()) {
+            if (e.getValue().state != State.AUTHORIZED) continue;
+            ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
+            if (p == null) continue;
+            p.refreshDisplayName();
+            p.refreshTabListName();
         }
-        MutableComponent coloredName = name.copy();
-        if (display != null && display.nameColor() != null) {
-            coloredName.withStyle(st -> st.withColor(display.nameColor()));
-        }
-        out.append(coloredName);
-        if (!forTab) {
-            // A child's hover wins over the vanilla entity hover that Minecraft puts around the whole name.
-            Component hover = Component.literal(RoleDisplay.legacy(placeholders(AuthConfig.HOVER_FORMAT.get(), r).replace("\\n", "\n")));
-            out.withStyle(st -> st.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hover)));
-        }
-        return out;
     }
 
     // ───────────────────────────── admin ─────────────────────────────

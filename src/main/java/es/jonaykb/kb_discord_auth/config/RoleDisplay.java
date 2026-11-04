@@ -1,7 +1,6 @@
 package es.jonaykb.kb_discord_auth.config;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -45,15 +44,6 @@ public record RoleDisplay(String roleId, String prefix, @Nullable TextColor name
             if (d != null) out.add(d);
         }
         return out;
-    }
-
-    /** The highest-priority entry matching one of the given roles, or null. */
-    @Nullable
-    public static RoleDisplay best(Collection<String> roles) {
-        for (RoleDisplay d : all()) {
-            if (roles.contains(d.roleId())) return d;
-        }
-        return null;
     }
 
     /** Turns &-codes into §-codes, which the client renders inside literal text. */

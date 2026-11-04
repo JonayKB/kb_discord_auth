@@ -31,6 +31,14 @@ public final class AuthConfig {
     public static final ForgeConfigSpec.IntValue ROLE_SYNC_MINUTES;
     public static final ForgeConfigSpec.BooleanValue KICK_ON_ROLE_LOSS;
 
+    public enum DisplayMode { HIGHEST, ALL }
+
+    public static final ForgeConfigSpec.EnumValue<DisplayMode> MODE;
+    public static final ForgeConfigSpec.BooleanValue AUTOMATIC_ROLES;
+    public static final ForgeConfigSpec.ConfigValue<String> AUTO_PREFIX_FORMAT;
+    public static final ForgeConfigSpec.BooleanValue INCLUDE_UNCOLORED_ROLES;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> EXCLUDED_ROLES;
+    public static final ForgeConfigSpec.IntValue MAX_ROLES;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ROLE_DISPLAY;
     public static final ForgeConfigSpec.ConfigValue<String> HOVER_FORMAT;
     public static final ForgeConfigSpec.BooleanValue SHOW_IN_TAB;
@@ -96,12 +104,32 @@ public final class AuthConfig {
         b.pop();
 
         b.comment("How roles look in chat and the tab list (only visual)").push("display");
+        MODE = b.comment("HIGHEST = only the player's highest role. ALL = every role, highest first.")
+                .defineEnum("mode", DisplayMode.HIGHEST);
+        AUTOMATIC_ROLES = b.comment(
+                        "Take each role's name, color and order from Discord (needs botToken).",
+                        "When false, or without a bot, only the roles in 'roles' below are shown, in that order.")
+                .define("automaticRoles", true);
+        AUTO_PREFIX_FORMAT = b.comment("Prefix of automatic roles. {name} = Discord role name. It gets the role's color.")
+                .define("autoPrefixFormat", "[{name}] ");
+        INCLUDE_UNCOLORED_ROLES = b.comment(
+                        "Also show Discord roles without a color (usually ping/notification roles).",
+                        "Uncolored roles listed in 'roles' are always shown.")
+                .define("includeUncoloredRoles", false);
+        EXCLUDED_ROLES = b.comment("Role IDs that are never shown. @everyone is always hidden.")
+                .defineListAllowEmpty(List.of("excludedRoles"), List::of, AuthConfig::isSnowflake);
+        MAX_ROLES = b.comment("In ALL mode, show at most this many roles. 0 = no limit.")
+                .defineInRange("maxRoles", 0, 0, 50);
         ROLE_DISPLAY = b.comment(
-                        "One entry per role: \"roleId|prefix|nameColor\". The FIRST role the player has wins, so sort by priority.",
-                        "prefix uses & color codes (&c, &l...). nameColor is optional: an & code (&c) or a hex color (#FF5555).",
+                        "Custom look per role: \"roleId|prefix|nameColor\". With automaticRoles it only overrides that role",
+                        "(the order still comes from Discord); without it, these are the only roles shown, in this order.",
+                        "prefix uses & color codes (&c, &l...), and can be empty to show only the name color.",
+                        "nameColor is optional: an & code (&c) or a hex color (#FF5555).",
                         "Example: [\"111111111111111111|&4[Admin] |&c\", \"222222222222222222|&b[VIP] |#55FFFF\"]")
                 .defineListAllowEmpty(List.of("roles"), List::of, o -> o instanceof String s && RoleDisplay.parse(s) != null);
-        HOVER_FORMAT = b.comment("Text shown when hovering a name in chat. Placeholders: {username} {globalName} {id}. Use \\n for new lines.")
+        HOVER_FORMAT = b.comment(
+                        "Text shown when hovering a name in chat. Use \\n for new lines. Placeholders:",
+                        "{username} {globalName} {id} and {roles} (names of the shown roles, needs automaticRoles).")
                 .define("hoverFormat", "&9Discord: &f@{username}");
         SHOW_IN_TAB = b.comment("Also show the role prefix and color in the tab list.")
                 .define("showInTab", true);

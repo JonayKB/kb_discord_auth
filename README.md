@@ -4,7 +4,7 @@ Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión c
 
 - **Login obligatorio.** Al entrar aparece una pantalla que no se puede cerrar, con el botón «Iniciar sesión con Discord». Hasta terminar, el jugador está congelado y no puede hablar, usar comandos, romper o colocar bloques, atacar, tirar o recoger objetos, ni recibir daño. Si no lo hace a tiempo, se le expulsa.
 - **Solo la primera vez.** Tras vincular la cuenta, el servidor le da al cliente un token secreto. En las siguientes entradas se envía solo y no hace falta abrir el navegador. Sirve también en servidores no premium (`online-mode=false`): sin el token, quien use el nombre de otro tiene que iniciar sesión con el Discord de esa cuenta.
-- **Roles en el chat y en el tab (solo visual).** Prefijo y color de nombre según el rol de Discord.
+- **Roles en el chat y en el tab (solo visual).** Se toman de Discord con su nombre, color y orden. Se puede mostrar solo el más alto o todos, y excluir roles.
 - **Hover en el chat.** Al pasar el ratón por el nombre se ve el `@` de Discord.
 - **Rol obligatorio.** Sin alguno de los roles configurados no se entra.
 - **Plaza reservada.** Un rol puede entrar aunque el servidor esté lleno.
@@ -46,14 +46,24 @@ roleSyncMinutes = 10
 kickOnRoleLoss = true
 
 [display]
-# "roleId|prefijo|colorDelNombre". Gana el PRIMERO que tenga el jugador: ordénalos por prioridad.
+mode = "HIGHEST"                  # HIGHEST = solo el rol más alto · ALL = todos, del más alto al más bajo
+automaticRoles = true             # nombre, color y orden de Discord (necesita botToken)
+autoPrefixFormat = "[{name}] "    # prefijo de cada rol, con el color del rol
+includeUncoloredRoles = false     # los roles sin color (de avisos, etc.) no se ven
+excludedRoles = ["333333333333333333"]   # nunca se ven (@everyone tampoco)
+maxRoles = 0                      # en modo ALL, máximo de roles (0 = sin límite)
+# Opcional: cambiar el aspecto de un rol concreto: "roleId|prefijo|colorDelNombre"
 roles = [
-  "111111111111111111|&4[Admin] |&c",
-  "222222222222222222|&b[VIP] |#55FFFF",
+  "111111111111111111|&4&l[Admin] |&c",
+  "222222222222222222||#55FFFF",  # prefijo vacío: solo colorea el nombre
 ]
-hoverFormat = "&9Discord: &f@{username}"
+hoverFormat = "&9Discord: &f@{username}\\n&7Roles: &f{roles}"
 showInTab = true
 ```
+
+El nombre toma el color del rol más alto que se muestre y tenga color, como en Discord. Los roles de Discord se vuelven a leer al arrancar, cada `roleSyncMinutes` y con `/discordauth resync`, así que si cambias el nombre o el color de un rol en Discord se actualiza solo.
+
+Sin `botToken` (o con `automaticRoles = false`) solo se ven los roles de la lista `roles`, en el orden de la lista.
 
 Los mensajes de expulsión también están en el TOML (`[messages]`). El archivo es `COMMON` y no se envía a los clientes, así que los secretos se quedan en el servidor.
 
@@ -69,7 +79,7 @@ Mete el mismo `.jar` en el modpack. No hace falta configurar nada.
 |---|---|
 | `/discordauth info <jugador>` | Muestra el Discord vinculado, si está en el servidor de Discord y sus roles |
 | `/discordauth unlink <jugador>` | Borra el vínculo y lo expulsa si está conectado |
-| `/discordauth resync` | Vuelve a leer los roles de todos los conectados |
+| `/discordauth resync` | Vuelve a leer los roles del servidor de Discord y los de todos los conectados |
 
 ## Cómo funciona
 
@@ -97,6 +107,8 @@ entra ─► pantalla de login ─► el cliente envía su token guardado
 ./gradlew runServer    # carpeta run/
 ./gradlew runClient    # carpeta run-client/ (separada para no pisar la config del servidor)
 ```
+
+Para probar sin Discord real, arranca el servidor con `-Dkb_discord_auth.apiBase=http://127.0.0.1:PUERTO/api/v10` apuntando a una API falsa.
 
 ## Licencia
 
