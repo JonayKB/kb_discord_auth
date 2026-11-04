@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "es.jonaykb.kb_discord_auth.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "kb_discord_auth.refmap.json",
+  "mixins": [
+    "PlayerListMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "server": [
+    "DedicatedPlayerListMixin"
+  ]
+}

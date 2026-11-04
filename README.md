@@ -1,0 +1,103 @@
+# KB Discord Auth
+
+Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión con **Discord (OAuth2)** al entrar al servidor.
+
+- **Login obligatorio.** Al entrar aparece una pantalla que no se puede cerrar, con el botón «Iniciar sesión con Discord». Hasta terminar, el jugador está congelado y no puede hablar, usar comandos, romper o colocar bloques, atacar, tirar o recoger objetos, ni recibir daño. Si no lo hace a tiempo, se le expulsa.
+- **Solo la primera vez.** Tras vincular la cuenta, el servidor le da al cliente un token secreto. En las siguientes entradas se envía solo y no hace falta abrir el navegador. Sirve también en servidores no premium (`online-mode=false`): sin el token, quien use el nombre de otro tiene que iniciar sesión con el Discord de esa cuenta.
+- **Roles en el chat y en el tab (solo visual).** Prefijo y color de nombre según el rol de Discord.
+- **Hover en el chat.** Al pasar el ratón por el nombre se ve el `@` de Discord.
+- **Rol obligatorio.** Sin alguno de los roles configurados no se entra.
+- **Plaza reservada.** Un rol puede entrar aunque el servidor esté lleno.
+
+Va en **cliente y servidor**. Un cliente sin el mod no puede entrar.
+
+## Puesta en marcha
+
+### 1. Aplicación de Discord
+
+1. [Developer Portal](https://discord.com/developers/applications) → tu aplicación (puede ser la del bot) → **OAuth2**.
+2. Copia el **Client ID** y el **Client Secret**.
+3. En **Redirects** añade la URL pública del callback, p. ej. `http://play.tudominio.com:8085/callback`.
+4. *(Recomendado)* Copia el **token del bot**. El bot tiene que estar en el servidor de Discord con el intent **Server Members**. Con él, los roles se leen en directo. Sin él, el mod pide a cada jugador el permiso `guilds.members.read` y guarda su refresh token para actualizar los roles.
+
+### 2. Configuración del servidor
+
+Arranca el servidor una vez con el mod, páralo y edita `config/kb_discord_auth-common.toml`.
+
+> Edita este archivo **con el servidor apagado**. Forge recarga el TOML en caliente y, si lo lee a medio guardar, lo restablece a los valores por defecto: se perdería el Client Secret y se expulsaría a todo el mundo.
+
+```toml
+[discord]
+clientId = "123456789012345678"
+clientSecret = "..."
+redirectUri = "http://play.tudominio.com:8085/callback"   # idéntica a la de Discord
+guildId = "123456789012345678"
+botToken = "..."                                           # opcional, recomendado
+
+[http]
+bindAddress = "0.0.0.0"   # 127.0.0.1 si usas nginx/Caddy delante
+port = 8085               # ábrelo en el firewall si no hay proxy
+
+[access]
+requireGuildMember = true
+requiredRoles = ["111111111111111111"]       # vacío = no hace falta rol
+bypassFullRoles = ["222222222222222222"]     # pueden entrar con el servidor lleno
+roleSyncMinutes = 10
+kickOnRoleLoss = true
+
+[display]
+# "roleId|prefijo|colorDelNombre". Gana el PRIMERO que tenga el jugador: ordénalos por prioridad.
+roles = [
+  "111111111111111111|&4[Admin] |&c",
+  "222222222222222222|&b[VIP] |#55FFFF",
+]
+hoverFormat = "&9Discord: &f@{username}"
+showInTab = true
+```
+
+Los mensajes de expulsión también están en el TOML (`[messages]`). El archivo es `COMMON` y no se envía a los clientes, así que los secretos se quedan en el servidor.
+
+Para servir el callback por **HTTPS**, pon un proxy delante (`proxy_pass http://127.0.0.1:8085;`) y usa `redirectUri = "https://auth.tudominio.com/callback"`.
+
+### 3. Cliente
+
+Mete el mismo `.jar` en el modpack. No hace falta configurar nada.
+
+## Comandos (permiso 3)
+
+| Comando | Qué hace |
+|---|---|
+| `/discordauth info <jugador>` | Muestra el Discord vinculado, si está en el servidor de Discord y sus roles |
+| `/discordauth unlink <jugador>` | Borra el vínculo y lo expulsa si está conectado |
+| `/discordauth resync` | Vuelve a leer los roles de todos los conectados |
+
+## Cómo funciona
+
+```
+entra ─► pantalla de login ─► el cliente envía su token guardado
+          ├─ token válido ──► lee los roles ─► ¿tiene acceso? ─► juega
+          └─ sin token ─────► navegador ─► Discord ─► /callback ─► vincula y da un token nuevo ─► ¿tiene acceso? ─► juega
+```
+
+- Los vínculos están en `config/kb_discord_auth/links.json` (servidor). Se guarda un hash del token, no el token. Edítalo solo con el servidor apagado, porque al cerrarse lo sobrescribe.
+- Los tokens del cliente están en `config/kb_discord_auth/client_tokens.json`, uno por servidor y cuenta. Si se borra, el jugador vuelve a iniciar sesión con Discord.
+- Una cuenta de Minecraft ya vinculada no se puede vincular a otro Discord (usa `unlink`). Por defecto, un Discord admite una sola cuenta de Minecraft (`maxAccountsPerDiscord`).
+- Si Discord no responde, se usan los últimos roles guardados.
+
+### Límites conocidos
+
+- **Plaza reservada en modo offline.** Cuando el servidor está lleno, la decisión se toma antes de recibir el token, solo por el nombre y con los roles guardados. Alguien que use el nombre de un jugador con plaza reservada ocuparía una plaza hasta que se le expulse por no iniciar sesión (`loginTimeoutSeconds`).
+- **Sin bot**, los refresh tokens de Discord se guardan en claro en `links.json`. Con `botToken` no se guarda ninguno.
+- En mundos de un jugador o LAN está desactivado (`enableInSingleplayer`).
+
+## Desarrollo
+
+```bash
+./gradlew build        # build/libs/kb_discord_auth-<versión>.jar
+./gradlew runServer    # carpeta run/
+./gradlew runClient    # carpeta run-client/ (separada para no pisar la config del servidor)
+```
+
+## Licencia
+
+MIT

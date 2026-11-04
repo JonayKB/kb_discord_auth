@@ -1,0 +1,11 @@
+{
+  "kb_discord_auth.screen.title": "Inicia sesión con Discord",
+  "kb_discord_auth.screen.checking": "Comprobando tu cuenta de Discord…",
+  "kb_discord_auth.screen.explain": "Para jugar en este servidor tienes que iniciar sesión con tu cuenta de Discord.",
+  "kb_discord_auth.screen.hint": "Se abrirá tu navegador. Cuando termines, vuelve aquí.",
+  "kb_discord_auth.screen.waiting": "Termina el inicio de sesión en el navegador. Esta pantalla se cerrará sola.",
+  "kb_discord_auth.screen.login": "Iniciar sesión con Discord",
+  "kb_discord_auth.screen.copy": "Copiar enlace",
+  "kb_discord_auth.screen.copied": "Enlace copiado al portapapeles",
+  "kb_discord_auth.screen.time_left": "Tiempo restante: %s"
+}

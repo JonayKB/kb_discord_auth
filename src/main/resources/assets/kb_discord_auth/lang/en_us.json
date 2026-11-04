@@ -1,0 +1,11 @@
+{
+  "kb_discord_auth.screen.title": "Log in with Discord",
+  "kb_discord_auth.screen.checking": "Checking your Discord account…",
+  "kb_discord_auth.screen.explain": "To play on this server you have to log in with your Discord account.",
+  "kb_discord_auth.screen.hint": "Your browser will open. When you're done, come back here.",
+  "kb_discord_auth.screen.waiting": "Finish the login in your browser. This screen will close by itself.",
+  "kb_discord_auth.screen.login": "Log in with Discord",
+  "kb_discord_auth.screen.copy": "Copy link",
+  "kb_discord_auth.screen.copied": "Link copied to the clipboard",
+  "kb_discord_auth.screen.time_left": "Time left: %s"
+}
