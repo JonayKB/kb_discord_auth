@@ -5,6 +5,7 @@ Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión c
 - **Login obligatorio.** Al entrar aparece una pantalla que no se puede cerrar, con el botón «Iniciar sesión con Discord». Hasta terminar, el jugador está congelado y no puede hablar, usar comandos, romper o colocar bloques, atacar, tirar o recoger objetos, ni recibir daño. Si no lo hace a tiempo, se le expulsa.
 - **Solo la primera vez.** Tras vincular la cuenta, el servidor le da al cliente un token secreto. En las siguientes entradas se envía solo y no hace falta abrir el navegador. Sirve también en servidores no premium (`online-mode=false`): sin el token, quien use el nombre de otro tiene que iniciar sesión con el Discord de esa cuenta.
 - **Roles en el chat y en el tab (solo visual).** Se toman de Discord con su nombre, color y orden. Se puede mostrar solo el más alto o todos, y excluir roles.
+- **Color del rol sobre la cabeza.** El nombre encima del jugador toma el color de su rol, sin el prefijo.
 - **Hover en el chat.** Al pasar el ratón por el nombre se ve el `@` de Discord.
 - **Foto de perfil de Discord** redonda a la izquierda del nombre en el chat, y en el tab delante de la cabeza de la skin.
 - **Rol obligatorio.** Sin alguno de los roles configurados no se entra.
@@ -64,6 +65,7 @@ roles = [
   "222222222222222222||#55FFFF",  # prefijo vacío: solo colorea el nombre
 ]
 hoverFormat = "&9Discord: &f@{username}\\n&7Roles: &f{roles}"
+showInNameTag = true              # nombre sobre la cabeza con el color del rol (sin prefijo)
 showInTab = true
 avatarsInChat = true              # foto de Discord a la izquierda del nombre en el chat
 avatarsInTab = true               # foto de Discord en el tab, delante de la cabeza de la skin

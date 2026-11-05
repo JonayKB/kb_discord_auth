@@ -36,10 +36,12 @@ import es.jonaykb.kb_discord_auth.discord.DiscordApi.Membership;
 import es.jonaykb.kb_discord_auth.discord.DiscordApi.TokenResponse;
 import es.jonaykb.kb_discord_auth.network.AuthDonePacket;
 import es.jonaykb.kb_discord_auth.network.HelloPacket;
+import es.jonaykb.kb_discord_auth.network.NameTagColorPacket;
 import es.jonaykb.kb_discord_auth.network.Network;
 import es.jonaykb.kb_discord_auth.network.OpenAuthPacket;
 import es.jonaykb.kb_discord_auth.server.LinkStore.LinkRecord;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -177,6 +179,9 @@ public final class AuthManager {
     public void onLogout(ServerPlayer player) {
         Session s = sessions.remove(player.getUUID());
         if (s != null && s.oauthState != null) oauthStates.remove(s.oauthState);
+        if (s != null && s.state == State.AUTHORIZED) {
+            Network.sendToAll(new NameTagColorPacket(player.getUUID(), NameTagColorPacket.NONE));
+        }
     }
 
     /** The client answered the Hello with its saved token ("" if none). */
@@ -315,8 +320,8 @@ public final class AuthManager {
         }
         s.state = State.AUTHORIZED;
         Network.sendTo(p, new AuthDonePacket(newClientToken == null ? "" : newClientToken));
-        p.refreshDisplayName();
-        p.refreshTabListName();
+        refreshName(p);
+        sendNameTagsTo(p);
         p.sendSystemMessage(Component.literal(RoleDisplay.legacy(placeholders(AuthConfig.MSG_LOGGED_IN.get(), r))));
         return null;
     }
@@ -403,8 +408,7 @@ public final class AuthManager {
                     kick(p, deny);
                     return;
                 }
-                p.refreshDisplayName();
-                p.refreshTabListName();
+                refreshName(p);
             }, server);
         }
         return started;
@@ -491,9 +495,31 @@ public final class AuthManager {
             if (e.getValue().state != State.AUTHORIZED) continue;
             ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
             if (p == null) continue;
-            p.refreshDisplayName();
-            p.refreshTabListName();
+            refreshName(p);
         }
+    }
+
+    /** Re-applies the role look of a logged-in player: chat name, tab list and, for everyone, the name tag color. */
+    private void refreshName(ServerPlayer p) {
+        p.refreshDisplayName();
+        p.refreshTabListName();
+        Network.sendToAll(new NameTagColorPacket(p.getUUID(), nameTagColor(p.getUUID())));
+    }
+
+    /** Sends a player who just logged in the name tag colors of everyone already online. */
+    private void sendNameTagsTo(ServerPlayer to) {
+        for (Map.Entry<UUID, Session> e : sessions.entrySet()) {
+            if (e.getValue().state != State.AUTHORIZED || e.getKey().equals(to.getUUID())) continue;
+            int color = nameTagColor(e.getKey());
+            if (color != NameTagColorPacket.NONE) Network.sendTo(to, new NameTagColorPacket(e.getKey(), color));
+        }
+    }
+
+    private int nameTagColor(UUID uuid) {
+        LinkRecord r = store.get(uuid);
+        if (!AuthConfig.SHOW_IN_NAME_TAG.get() || r == null) return NameTagColorPacket.NONE;
+        TextColor color = NameDecorator.nameTagColor(r, guildRoles);
+        return color == null ? NameTagColorPacket.NONE : color.getValue();
     }
 
     // ───────────────────────────── admin ─────────────────────────────
