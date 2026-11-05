@@ -161,19 +161,21 @@ Por cada servidor de Minecraft se pueden crear uno o varios rankings:
 ### Publicación
 
 - El bot publica **un mensaje** por ranking y después lo **edita** (guarda el id del mensaje). Si el mensaje ya no existe, lo vuelve a publicar.
-- Un embed por estadística, o uno solo con un campo por estadística si caben. Con los dos periodos, columnas "Total" y "Esta semana".
+- **Un solo embed** con una categoría y un periodo: por defecto, la primera estadística y el primer periodo configurados.
+- Debajo, un **menú desplegable** para elegir la estadística y **botones** "Total" y "Esta semana". Sin menú si el ranking tiene una sola estadística, y sin botones si tiene un solo periodo.
+- Al usar los controles del mensaje del canal, el bot responde a esa persona con una **vista privada** (efímera) con lo que eligió y su posición. El mensaje del canal no cambia, así nadie le cambia el ranking a los demás. Dentro de la vista privada, los controles la actualizan a ella misma.
 - Cada línea: posición, nombre y valor. Si hay `discordId` y la persona sigue en el servidor de Discord, se muestra `<@discordId>` (en un embed no le avisa) y el nombre de Minecraft entre paréntesis. Si no, solo el nombre de Minecraft.
 - Formato de los valores:
   - Tiempo: `3d 4h`, `5h 12m`, `42m`.
   - Distancia: `distanceCm / 100000` en km con un decimal (`12.3 km`), o metros por debajo de 1 km.
   - El resto, el número con separador de miles.
-- Pie del embed: "Actualizado <t:unix:R>". Si el último envío del servidor tiene más de 3 intervalos de antigüedad, añadir "⚠ sin datos recientes del servidor".
+- Al final del embed: "Actualizado <t:unix:R>" (va en la descripción, porque Discord no muestra esas marcas de tiempo en el pie). Si el último envío del servidor tiene más de 3 intervalos de antigüedad, se añade "⚠ sin datos recientes del servidor". El mod solo envía cuando hay jugadores conectados, así que con el servidor vacío el aviso también aparece.
 - Empates: más arriba quien llegó antes a ese valor (`taken_at` menor), y si no, por nombre.
 - Muertes es un ranking "de más a menos" como los demás, solo que el título lo deja claro ("Más muertes").
 
-### Comando opcional
+### Comando
 
-`/ranking estadistica:<…> periodo:<total|semanal> [servidor]`: respuesta efímera con el top y la posición de quien lo ejecuta (por su `discordId`).
+`/ranking [estadistica] [periodo] [servidor]`: respuesta efímera con el top 10 y la posición de quien lo ejecuta (por su `discordId`). Lleva el mismo menú y los mismos botones, que actualizan esa respuesta. Por defecto: tiempo jugado y total.
 
 ## 9. Configuración del mod
 
