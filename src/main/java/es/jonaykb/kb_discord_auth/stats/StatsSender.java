@@ -42,7 +42,14 @@ final class StatsSender {
 
     record Entry(UUID uuid, String name, @Nullable String discordId, boolean online, PlayerStats stats, long takenAt) {}
 
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    /*
+     * HTTP/1.1 on purpose: with http:// the default client asks for "Upgrade: h2c", and Node servers with a WebSocket
+     * (like the bot's panel) hand that request to their upgrade handler, which answered with an empty 401.
+     */
+    private final HttpClient http = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
     private final Map<UUID, Entry> pending = new ConcurrentHashMap<>();
     private final AtomicBoolean inFlight = new AtomicBoolean();
     private final String serverId;
