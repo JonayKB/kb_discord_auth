@@ -9,6 +9,8 @@ Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión c
 - **Foto de perfil de Discord** redonda a la izquierda del nombre en el chat, y en el tab delante de la cabeza de la skin.
 - **Rol obligatorio.** Sin alguno de los roles configurados no se entra.
 - **Plaza reservada.** Un rol puede entrar aunque el servidor esté lleno.
+- **Tab con estadísticas.** Arriba, el nombre del servidor y los jugadores conectados. Abajo, cada jugador ve las suyas: tiempo jugado, muertes, mobs matados, distancia y logros.
+- **Estadísticas para KB Discord Bot.** Opcional: el servidor envía esas estadísticas al bot para publicar un ranking (total y semanal) en un canal. El formato está en [`docs/stats-contract.md`](docs/stats-contract.md).
 
 Va en **cliente y servidor**. Un cliente sin el mod no puede entrar.
 
@@ -28,6 +30,9 @@ Arranca el servidor una vez con el mod, páralo y edita `config/kb_discord_auth-
 > Edita este archivo **con el servidor apagado**. Forge recarga el TOML en caliente y, si lo lee a medio guardar, lo restablece a los valores por defecto: se perdería el Client Secret y se expulsaría a todo el mundo.
 
 ```toml
+[general]
+serverName = "KB Survival"   # sale en el tab ({server}) y en el ranking del bot
+
 [discord]
 clientId = "123456789012345678"
 clientSecret = "..."
@@ -62,6 +67,34 @@ hoverFormat = "&9Discord: &f@{username}\\n&7Roles: &f{roles}"
 showInTab = true
 avatarsInChat = true              # foto de Discord a la izquierda del nombre en el chat
 avatarsInTab = true               # foto de Discord en el tab, delante de la cabeza de la skin
+
+[tab]
+enabled = true
+header = [                        # una línea por elemento; "" = línea en blanco
+  "",
+  "&b&l✦ {server} &b&l✦",
+  "&7Jugadores conectados: &a{online}&8/&7{max}",
+  "",
+]
+footer = [                        # cada jugador ve aquí sus estadísticas
+  "",
+  "&8&m                                        ",
+  "&e⌛ &7Tiempo jugado  &f{playtime}",
+  "&c☠ &7Muertes  &f{deaths}",
+  "&a⚔ &7Mobs matados  &f{mobKills}",
+  "&b➹ &7Distancia  &f{distance}",
+  "&d★ &7Logros  &f{advancements}",
+  "&8&m                                        ",
+  "",
+]
+updateSeconds = 5
+
+[stats]                           # envío al bot (ver docs/stats-contract.md)
+enabled = false
+endpoint = "https://panel.tudominio.com/api/integrations/minecraft/stats"
+apiKey = "..."                    # la da el panel del bot
+intervalMinutes = 5               # jugadores conectados; además, siempre al salir
+backfillOnStart = true            # al arrancar, manda también las de quien haya entrado alguna vez
 ```
 
 El nombre toma el color del rol más alto que se muestre y tenga color, como en Discord. Los roles de Discord se vuelven a leer al arrancar, cada `roleSyncMinutes` y con `/discordauth resync`, así que si cambias el nombre o el color de un rol en Discord se actualiza solo.
@@ -69,6 +102,8 @@ El nombre toma el color del rol más alto que se muestre y tenga color, como en 
 Sin `botToken` (o con `automaticRoles = false`) solo se ven los roles de la lista `roles`, en el orden de la lista.
 
 Cada cliente descarga las fotos de perfil directamente de `cdn.discordapp.com`. Si alguien no tiene foto, o no carga, se ve el avatar por defecto de Discord. La foto se actualiza con cada sincronización de roles. En los servidores no premium (`online-mode=false`) Minecraft no dibuja las cabezas en el tab, así que ahí solo se ve la foto de Discord.
+
+La distancia suma andar, correr, nadar, escalar, élitros y montar, pero no el vuelo en creativo ni las caídas. Los logros cuentan solo los que salen en la pantalla de logros (no las recetas). Al bot no se envían los jugadores que aún no han iniciado sesión con Discord.
 
 Los mensajes de expulsión también están en el TOML (`[messages]`). El archivo es `COMMON` y no se envía a los clientes, así que los secretos se quedan en el servidor.
 

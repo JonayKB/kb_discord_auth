@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 
 import es.jonaykb.kb_discord_auth.config.AuthConfig;
 import es.jonaykb.kb_discord_auth.config.RoleDisplay;
+import es.jonaykb.kb_discord_auth.stats.StatsManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -49,10 +50,12 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
         AuthManager.start(event.getServer());
+        StatsManager.start(event.getServer());
     }
 
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
+        StatsManager.stop();
         AuthManager.stop();
     }
 
@@ -64,7 +67,10 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         AuthManager auth = auth();
-        if (event.phase == TickEvent.Phase.END && auth != null) auth.tick();
+        if (event.phase != TickEvent.Phase.END) return;
+        if (auth != null) auth.tick();
+        StatsManager stats = StatsManager.get();
+        if (stats != null) stats.tick();
     }
 
     // ───────── login ─────────
@@ -72,13 +78,20 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         AuthManager auth = auth();
-        if (auth != null && event.getEntity() instanceof ServerPlayer p) auth.onLogin(p);
+        if (!(event.getEntity() instanceof ServerPlayer p)) return;
+        if (auth != null) auth.onLogin(p);
+        StatsManager stats = StatsManager.get();
+        if (stats != null) stats.onLogin(p);
     }
 
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         AuthManager auth = auth();
-        if (auth != null && event.getEntity() instanceof ServerPlayer p) auth.onLogout(p);
+        if (!(event.getEntity() instanceof ServerPlayer p)) return;
+        // Stats first: they need to know whether the player had logged in, which onLogout forgets.
+        StatsManager stats = StatsManager.get();
+        if (stats != null) stats.onLogout(p);
+        if (auth != null) auth.onLogout(p);
     }
 
     // ───────── names (chat + tab) ─────────

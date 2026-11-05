@@ -27,7 +27,7 @@ import es.jonaykb.kb_discord_auth.config.AuthConfig;
 public final class DiscordApi {
     /** Only for testing against a fake Discord: -Dkb_discord_auth.apiBase=http://127.0.0.1:18999/api/v10 */
     private static final String API = System.getProperty("kb_discord_auth.apiBase", "https://discord.com/api/v10");
-    private static final String USER_AGENT = "DiscordBot (https://github.com/JonayKB/kb_discord_auth, 1.2)";
+    private static final String USER_AGENT = "DiscordBot (https://github.com/JonayKB/kb_discord_auth, 1.3)";
 
     public record TokenResponse(String accessToken, String refreshToken, long expiresAtMillis) {}
 

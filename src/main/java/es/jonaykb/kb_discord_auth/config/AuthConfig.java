@@ -15,6 +15,18 @@ public final class AuthConfig {
     public static final ForgeConfigSpec.BooleanValue ENABLE_IN_SINGLEPLAYER;
     public static final ForgeConfigSpec.IntValue LOGIN_TIMEOUT_SECONDS;
     public static final ForgeConfigSpec.IntValue MAX_ACCOUNTS_PER_DISCORD;
+    public static final ForgeConfigSpec.ConfigValue<String> SERVER_NAME;
+
+    public static final ForgeConfigSpec.BooleanValue TAB_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> TAB_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> TAB_FOOTER;
+    public static final ForgeConfigSpec.IntValue TAB_UPDATE_SECONDS;
+
+    public static final ForgeConfigSpec.BooleanValue STATS_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_ENDPOINT;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_API_KEY;
+    public static final ForgeConfigSpec.IntValue STATS_INTERVAL_MINUTES;
+    public static final ForgeConfigSpec.BooleanValue STATS_BACKFILL;
 
     public static final ForgeConfigSpec.ConfigValue<String> CLIENT_ID;
     public static final ForgeConfigSpec.ConfigValue<String> CLIENT_SECRET;
@@ -67,6 +79,8 @@ public final class AuthConfig {
                 .defineInRange("loginTimeoutSeconds", 300, 30, 3600);
         MAX_ACCOUNTS_PER_DISCORD = b.comment("How many Minecraft accounts can be linked to the same Discord account.")
                 .defineInRange("maxAccountsPerDiscord", 1, 1, 100);
+        SERVER_NAME = b.comment("Name of this server. Shown in the tab list ({server}) and sent to the bot with the stats.")
+                .define("serverName", "Minecraft");
         b.pop();
 
         b.comment("Discord application (https://discord.com/developers/applications)").push("discord");
@@ -141,6 +155,44 @@ public final class AuthConfig {
                 .define("avatarsInTab", true);
         b.pop();
 
+        b.comment("Tab list header and footer. Each player sees their own stats in the footer.").push("tab");
+        TAB_ENABLED = b.comment("Show the header and footer below.").define("enabled", true);
+        TAB_HEADER = b.comment(
+                        "Lines above the player list (one per entry, \"\" = blank line). & color codes.",
+                        "Placeholders: {server} {online} {max} {player}, and every stat placeholder of the footer.")
+                .defineListAllowEmpty(List.of("header"), () -> List.of(
+                        "",
+                        "&b&l\u2726 {server} &b&l\u2726",
+                        "&7Jugadores conectados: &a{online}&8/&7{max}",
+                        ""), o -> o instanceof String);
+        TAB_FOOTER = b.comment(
+                        "Lines below the player list, with the stats of the player who sees it.",
+                        "Placeholders: {playtime} {deaths} {mobKills} {distance} {advancements} {player} {server} {online} {max}")
+                .defineListAllowEmpty(List.of("footer"), () -> List.of(
+                        "",
+                        "&8&m                                        ",
+                        "&e\u231b &7Tiempo jugado  &f{playtime}",
+                        "&c\u2620 &7Muertes  &f{deaths}",
+                        "&a\u2694 &7Mobs matados  &f{mobKills}",
+                        "&b\u27b9 &7Distancia  &f{distance}",
+                        "&d\u2605 &7Logros  &f{advancements}",
+                        "&8&m                                        ",
+                        ""), o -> o instanceof String);
+        TAB_UPDATE_SECONDS = b.comment("Refresh the header and footer every N seconds.")
+                .defineInRange("updateSeconds", 5, 1, 300);
+        b.pop();
+
+        b.comment("Send player stats to KB Discord Bot for a leaderboard. See docs/stats-contract.md").push("stats");
+        STATS_ENABLED = b.comment("Send stats to the bot.").define("enabled", false);
+        STATS_ENDPOINT = b.comment("Full URL of the bot endpoint, e.g. https://panel.example.com/api/integrations/minecraft/stats")
+                .define("endpoint", "");
+        STATS_API_KEY = b.comment("API key the bot gives you for this server. Keep it private.").define("apiKey", "");
+        STATS_INTERVAL_MINUTES = b.comment("Send the stats of online players every N minutes (and always when someone leaves).")
+                .defineInRange("intervalMinutes", 5, 1, 1440);
+        STATS_BACKFILL = b.comment("On start, also send the saved stats of every player who has ever joined (world/stats).")
+                .define("backfillOnStart", true);
+        b.pop();
+
         b.comment("Messages (& color codes; {username} = Discord username)").push("messages");
         MSG_LOGGED_IN = b.define("loggedIn", "&aSesión iniciada con Discord como &f@{username}");
         MSG_KICK_TIMEOUT = b.define("kickTimeout", "No has iniciado sesión con Discord a tiempo.");
@@ -165,6 +217,10 @@ public final class AuthConfig {
     public static boolean isConfigured() {
         return !CLIENT_ID.get().isBlank() && !CLIENT_SECRET.get().isBlank()
                 && !REDIRECT_URI.get().isBlank() && !GUILD_ID.get().isBlank();
+    }
+
+    public static boolean statsConfigured() {
+        return STATS_ENABLED.get() && !STATS_ENDPOINT.get().isBlank() && !STATS_API_KEY.get().isBlank();
     }
 
     public static boolean useBot() {
