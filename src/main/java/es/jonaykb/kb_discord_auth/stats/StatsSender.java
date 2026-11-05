@@ -126,7 +126,11 @@ final class StatsSender {
                     } else {
                         failing = true;
                         if (res.statusCode() == 401 || res.statusCode() == 403) {
-                            if (!warnedAuth) LOGGER.error("The bot refused stats.apiKey ({}). Check it in the config.", res.statusCode());
+                            if (!warnedAuth) {
+                                LOGGER.error("The bot refused stats.apiKey ({}): {}. Check it in the config.", res.statusCode(), shorten(res.body()));
+                                LOGGER.error("Sent key {} to {} (it must match the last key generated in the panel; regenerating it invalidates the old one)",
+                                        describeKey(AuthConfig.STATS_API_KEY.get()), AuthConfig.STATS_ENDPOINT.get().trim());
+                            }
                             warnedAuth = true;
                         } else {
                             LOGGER.warn("The bot answered {} to the stats, will retry: {}", res.statusCode(), shorten(res.body()));
@@ -169,6 +173,23 @@ final class StatsSender {
         }
         root.add("players", players);
         return GSON.toJson(root);
+    }
+
+    /**
+     * The key without revealing it: start, end and length, so it can be compared with the one in the panel.
+     * Warns about what usually breaks a copy-paste (spaces, quotes, missing prefix).
+     */
+    static String describeKey(String raw) {
+        String key = raw.trim();
+        if (key.isEmpty()) return "(empty)";
+        String shown = key.length() <= 12 ? "*".repeat(key.length()) : key.substring(0, 8) + "…" + key.substring(key.length() - 4);
+        StringBuilder out = new StringBuilder(shown).append(" (").append(key.length()).append(" chars");
+        if (!key.equals(raw)) out.append(", had spaces around it");
+        if (key.contains("\"") || key.contains("'")) out.append(", contains quotes");
+        if (key.chars().anyMatch(Character::isWhitespace)) out.append(", contains spaces");
+        if (!key.startsWith("kbs_")) out.append(", does not start with kbs_");
+        else if (key.length() != 47) out.append(", expected 47");
+        return out.append(')').toString();
     }
 
     private static String shorten(String s) {
