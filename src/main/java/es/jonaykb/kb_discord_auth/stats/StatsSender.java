@@ -48,6 +48,8 @@ final class StatsSender {
     private final String serverId;
     private final String version;
     private volatile boolean warnedAuth;
+    /** The last send failed: the next successful one is logged, so the error above it is not the last word. */
+    private volatile boolean failing;
 
     StatsSender(String serverId, String version) {
         this.serverId = serverId;
@@ -110,14 +112,19 @@ final class StatsSender {
         return http.sendAsync(req, HttpResponse.BodyHandlers.ofString())
                 .handle((res, err) -> {
                     if (err != null) {
+                        failing = true;
                         LOGGER.warn("Could not send stats to the bot ({}), will retry: {}", batch.size(), err.toString());
                         requeue(batch);
                     } else if (res.statusCode() / 100 == 2) {
+                        if (failing) LOGGER.info("The bot is accepting stats again ({} players sent)", batch.size());
+                        failing = false;
                         warnedAuth = false;
                     } else if (res.statusCode() == 400 || res.statusCode() == 413) {
+                        failing = true;
                         // The bot rejected the data itself: retrying the same thing would fail forever.
                         LOGGER.error("The bot rejected the stats ({}): {}", res.statusCode(), shorten(res.body()));
                     } else {
+                        failing = true;
                         if (res.statusCode() == 401 || res.statusCode() == 403) {
                             if (!warnedAuth) LOGGER.error("The bot refused stats.apiKey ({}). Check it in the config.", res.statusCode());
                             warnedAuth = true;
