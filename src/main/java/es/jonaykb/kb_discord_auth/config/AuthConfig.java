@@ -53,6 +53,7 @@ public final class AuthConfig {
     public static final ForgeConfigSpec.IntValue MAX_ROLES;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ROLE_DISPLAY;
     public static final ForgeConfigSpec.ConfigValue<String> HOVER_FORMAT;
+    public static final ForgeConfigSpec.BooleanValue SHOW_IN_NAME_TAG;
     public static final ForgeConfigSpec.BooleanValue SHOW_IN_TAB;
     public static final ForgeConfigSpec.BooleanValue AVATARS_IN_CHAT;
     public static final ForgeConfigSpec.BooleanValue AVATARS_IN_TAB;
@@ -147,6 +148,8 @@ public final class AuthConfig {
                         "Text shown when hovering a name in chat. Use \\n for new lines. Placeholders:",
                         "{username} {globalName} {id} and {roles} (names of the shown roles, needs automaticRoles).")
                 .define("hoverFormat", "&9Discord: &f@{username}");
+        SHOW_IN_NAME_TAG = b.comment("Color the name above the player's head with their role color (only the color, no prefix).")
+                .define("showInNameTag", true);
         SHOW_IN_TAB = b.comment("Also show the role prefix and color in the tab list.")
                 .define("showInTab", true);
         AVATARS_IN_CHAT = b.comment("Show the player's Discord profile picture left of their name in chat.")

@@ -43,8 +43,7 @@ final class NameDecorator {
         for (Shown s : shown) {
             if (!s.prefix().getString().isEmpty()) out.append(s.prefix());
         }
-        // Like Discord: the name takes the color of the highest shown role that has one.
-        TextColor nameColor = shown.stream().map(Shown::nameColor).filter(Objects::nonNull).findFirst().orElse(null);
+        TextColor nameColor = nameColor(shown);
         MutableComponent coloredName = name.copy();
         if (nameColor != null) coloredName.withStyle(st -> st.withColor(nameColor));
         out.append(coloredName);
@@ -57,6 +56,18 @@ final class NameDecorator {
             out.withStyle(st -> st.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hover)));
         }
         return out;
+    }
+
+    /** Color of the name tag above the head: the same name color as in chat, without the prefix. */
+    @Nullable
+    static TextColor nameTagColor(LinkRecord r, Map<String, GuildRole> guild) {
+        return nameColor(shownRoles(r.roles, guild));
+    }
+
+    /** Like Discord: the name takes the color of the highest shown role that has one. */
+    @Nullable
+    private static TextColor nameColor(List<Shown> shown) {
+        return shown.stream().map(Shown::nameColor).filter(Objects::nonNull).findFirst().orElse(null);
     }
 
     /** The roles to show, highest first, after exclusions and the HIGHEST/ALL mode. */

@@ -1,6 +1,7 @@
 package es.jonaykb.kb_discord_auth.client;
 
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.RenderNameTagEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -16,5 +17,11 @@ public final class ClientEvents {
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientAuth.reset();
         AvatarTextures.clear();
+        ClientNameTags.clear();
+    }
+
+    @SubscribeEvent
+    public static void onRenderNameTag(RenderNameTagEvent event) {
+        ClientNameTags.onRenderNameTag(event);
     }
 }
