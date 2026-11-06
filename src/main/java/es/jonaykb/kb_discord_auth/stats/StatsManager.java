@@ -1,15 +1,6 @@
 package es.jonaykb.kb_discord_auth.stats;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -17,10 +8,6 @@ import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.mojang.authlib.GameProfile;
 import com.mojang.logging.LogUtils;
 
 import es.jonaykb.kb_discord_auth.KbDiscordAuth;
@@ -32,9 +19,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundTabListPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.GameProfileCache;
-import net.minecraft.stats.ServerStatsCounter;
-import net.minecraft.world.level.storage.LevelResource;
 import net.minecraftforge.fml.ModList;
 
 /** Tab list header/footer with each player's own stats, and periodic sending of stats to the bot. */
@@ -44,17 +28,20 @@ public final class StatsManager {
     @Nullable private static StatsManager instance;
 
     private final MinecraftServer server;
+    private final StatsLeaderboard leaderboard;
     @Nullable private StatsSender sender;
     private long ticks;
 
     private StatsManager(MinecraftServer server) {
         this.server = server;
+        this.leaderboard = new StatsLeaderboard(server);
     }
 
     /** Called after {@link AuthManager#start}, which loads the links (and the server id). */
     public static void start(MinecraftServer server) {
         StatsManager m = new StatsManager(server);
         instance = m;
+        m.leaderboard.reload();
         if (!AuthConfig.STATS_ENABLED.get()) return;
         if (!AuthConfig.statsConfigured()) {
             LOGGER.error("stats.enabled is true but stats.endpoint or stats.apiKey is empty: no stats will be sent.");
@@ -78,6 +65,11 @@ public final class StatsManager {
     @Nullable
     public static StatsManager get() {
         return instance;
+    }
+
+    /** Rankings for /stats. Available even when nothing is sent to the bot. */
+    public StatsLeaderboard leaderboard() {
+        return leaderboard;
     }
 
     // ───────── events ─────────
@@ -166,42 +158,15 @@ public final class StatsManager {
      * first day. Names and links are looked up here on the server thread; the files are read on another one.
      */
     private void backfill() {
-        Path statsDir = server.getWorldPath(LevelResource.PLAYER_STATS_DIR);
-        Path advDir = server.getWorldPath(LevelResource.PLAYER_ADVANCEMENTS_DIR);
-        record Who(UUID uuid, String name, @Nullable String discordId) {}
-        List<Who> players = new ArrayList<>();
-        GameProfileCache cache = server.getProfileCache();
-        AuthManager auth = AuthManager.get();
-        try (DirectoryStream<Path> files = Files.newDirectoryStream(statsDir, "*.json")) {
-            for (Path f : files) {
-                String base = f.getFileName().toString().replace(".json", "");
-                UUID uuid;
-                try {
-                    uuid = UUID.fromString(base);
-                } catch (IllegalArgumentException e) {
-                    continue;
-                }
-                LinkRecord link = auth == null ? null : auth.store().get(uuid);
-                String name = cache == null ? null : cache.get(uuid).map(GameProfile::getName).orElse(null);
-                if (name == null && link != null) name = link.minecraftName;
-                if (name == null) continue; // No way to show them on a leaderboard.
-                players.add(new Who(uuid, name, link == null ? null : link.discordId));
-            }
-        } catch (IOException e) {
-            if (Files.exists(statsDir)) LOGGER.warn("Could not list {}: {}", statsDir, e.toString());
-            return;
-        }
+        List<SavedStats.Known> players = SavedStats.known(server);
         if (players.isEmpty()) return;
-
-        Set<String> counted = PlayerStats.countedAdvancementIds(server);
+        SavedStats.Source src = SavedStats.source(server);
         StatsSender s = sender;
         CompletableFuture.runAsync(() -> {
             long now = System.currentTimeMillis();
-            for (Who w : players) {
+            for (SavedStats.Known w : players) {
                 try {
-                    ServerStatsCounter counter = new ServerStatsCounter(server, statsDir.resolve(w.uuid() + ".json").toFile());
-                    int adv = countDone(advDir.resolve(w.uuid() + ".json"), counted);
-                    s.queue(new StatsSender.Entry(w.uuid(), w.name(), w.discordId(), false, PlayerStats.of(counter, adv), now));
+                    s.queue(new StatsSender.Entry(w.uuid(), w.name(), w.discordId(), false, SavedStats.read(server, src, w.uuid()), now));
                 } catch (Exception e) {
                     LOGGER.warn("Could not read the stats of {}: {}", w.name(), e.toString());
                 }
@@ -209,21 +174,5 @@ public final class StatsManager {
             LOGGER.info("Sending saved stats of {} players to the bot", players.size());
             s.flush();
         });
-    }
-
-    private static int countDone(Path file, Set<String> counted) {
-        if (!Files.exists(file)) return 0;
-        try (Reader r = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-            JsonObject root = JsonParser.parseReader(r).getAsJsonObject();
-            int n = 0;
-            for (Map.Entry<String, JsonElement> e : root.entrySet()) {
-                if (!counted.contains(e.getKey()) || !e.getValue().isJsonObject()) continue;
-                JsonElement done = e.getValue().getAsJsonObject().get("done");
-                if (done != null && done.getAsBoolean()) n++;
-            }
-            return n;
-        } catch (Exception e) {
-            return 0;
-        }
     }
 }

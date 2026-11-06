@@ -7,5 +7,20 @@
   "kb_discord_auth.screen.login": "Iniciar sesión con Discord",
   "kb_discord_auth.screen.copy": "Copiar enlace",
   "kb_discord_auth.screen.copied": "Enlace copiado al portapapeles",
-  "kb_discord_auth.screen.time_left": "Tiempo restante: %s"
+  "kb_discord_auth.screen.time_left": "Tiempo restante: %s",
+  "kb_discord_auth.stats.title": "Estadísticas del servidor",
+  "kb_discord_auth.stats.mine": "Mis estadísticas",
+  "kb_discord_auth.stats.play_time": "Tiempo jugado",
+  "kb_discord_auth.stats.deaths": "Más muertes",
+  "kb_discord_auth.stats.mob_kills": "Mobs matados",
+  "kb_discord_auth.stats.distance": "Distancia",
+  "kb_discord_auth.stats.advancements": "Logros",
+  "kb_discord_auth.stats.ranking": "Top 10 · %s",
+  "kb_discord_auth.stats.rank": "#%s de %s",
+  "kb_discord_auth.stats.players": "%s jugadores",
+  "kb_discord_auth.stats.refresh": "Actualizar",
+  "kb_discord_auth.stats.chat_header": "── Estadísticas de %s ──",
+  "kb_discord_auth.stats.not_found": "No hay estadísticas de %s.",
+  "kb_discord_auth.stats.console": "Usa /stats <jugador>.",
+  "kb_discord_auth.stats.unavailable": "Las estadísticas no están disponibles ahora mismo."
 }

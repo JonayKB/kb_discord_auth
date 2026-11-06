@@ -11,6 +11,7 @@ Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión c
 - **Rol obligatorio.** Sin alguno de los roles configurados no se entra.
 - **Plaza reservada.** Un rol puede entrar aunque el servidor esté lleno.
 - **Tab con estadísticas.** Arriba, el nombre del servidor y los jugadores conectados. Abajo, cada jugador ve las suyas: tiempo jugado, muertes, mobs matados, distancia y logros.
+- **Ranking en el juego.** `/stats` abre una pantalla con botones: el top 10 de cada estadística (con todos los jugadores, también los desconectados) y tu puesto aunque no estés en el top, como `/ranking` en Discord, y una pestaña con todas tus estadísticas. `/stats <jugador>` muestra las de otro en el chat. Solo totales: el ranking semanal lo calcula el bot.
 - **Estadísticas para KB Discord Bot.** Opcional: el servidor envía esas estadísticas al bot para publicar un ranking (total y semanal) en un canal. El formato está en [`docs/stats-contract.md`](docs/stats-contract.md).
 
 Va en **cliente y servidor**. Un cliente sin el mod no puede entrar.
@@ -115,7 +116,16 @@ Para servir el callback por **HTTPS**, pon un proxy delante (`proxy_pass http://
 
 Mete el mismo `.jar` en el modpack. No hace falta configurar nada.
 
-## Comandos (permiso 3)
+## Comandos
+
+Para todos:
+
+| Comando | Qué hace |
+|---|---|
+| `/stats` | Abre la pantalla de rankings y de tus estadísticas |
+| `/stats <jugador>` | Muestra en el chat las estadísticas de ese jugador y su puesto en cada ranking |
+
+Para administradores (permiso 3):
 
 | Comando | Qué hace |
 |---|---|
