@@ -95,10 +95,13 @@ public final class StatsManager {
         sender.flush();
     }
 
-    /** Players who haven't logged in with Discord yet may be using someone else's name: don't report them. */
+    /**
+     * Players who haven't logged in with Discord yet may be using someone else's name: don't report them.
+     * Load test bots aren't players.
+     */
     private static boolean restricted(ServerPlayer p) {
         AuthManager auth = AuthManager.get();
-        return auth != null && auth.isRestricted(p);
+        return AuthManager.isLoadTestBot(p) || (auth != null && auth.isRestricted(p));
     }
 
     // ───────── tab list ─────────

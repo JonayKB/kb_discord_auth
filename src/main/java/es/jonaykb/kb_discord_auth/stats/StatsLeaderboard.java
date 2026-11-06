@@ -92,6 +92,7 @@ public final class StatsLeaderboard {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             // Someone who hasn't logged in may be using another player's name: keep that player's saved stats.
             if (auth != null && auth.isRestricted(p)) continue;
+            if (AuthManager.isLoadTestBot(p)) continue;
             all.put(p.getUUID(), new StatsRow(p.getUUID(), p.getGameProfile().getName(), PlayerStats.of(p)));
         }
         return new ArrayList<>(all.values());
@@ -101,7 +102,9 @@ public final class StatsLeaderboard {
     public Collection<String> names() {
         Set<String> names = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (StatsRow r : saved.values()) names.add(r.name());
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) names.add(p.getGameProfile().getName());
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (!AuthManager.isLoadTestBot(p)) names.add(p.getGameProfile().getName());
+        }
         return names;
     }
 
