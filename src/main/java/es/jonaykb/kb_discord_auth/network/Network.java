@@ -13,7 +13,7 @@ public final class Network {
      * Both sides must have exactly this version. Clients without the mod report the channel as
      * absent, which does not match, so Forge refuses them on login: the mod is required on the client.
      */
-    private static final String VERSION = "2";
+    private static final String VERSION = "3";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(KbDiscordAuth.MOD_ID, "main"),
@@ -38,6 +38,12 @@ public final class Network {
         CHANNEL.messageBuilder(NameTagColorPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(NameTagColorPacket::encode).decoder(NameTagColorPacket::decode)
                 .consumerMainThread(NameTagColorPacket::handle).add();
+        CHANNEL.messageBuilder(StatsPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(StatsPacket::encode).decoder(StatsPacket::decode)
+                .consumerMainThread(StatsPacket::handle).add();
+        CHANNEL.messageBuilder(StatsRequestPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(StatsRequestPacket::encode).decoder(StatsRequestPacket::decode)
+                .consumerMainThread(StatsRequestPacket::handle).add();
     }
 
     public static void sendTo(ServerPlayer player, Object packet) {

@@ -7,5 +7,20 @@
   "kb_discord_auth.screen.login": "Log in with Discord",
   "kb_discord_auth.screen.copy": "Copy link",
   "kb_discord_auth.screen.copied": "Link copied to the clipboard",
-  "kb_discord_auth.screen.time_left": "Time left: %s"
+  "kb_discord_auth.screen.time_left": "Time left: %s",
+  "kb_discord_auth.stats.title": "Server statistics",
+  "kb_discord_auth.stats.mine": "My stats",
+  "kb_discord_auth.stats.play_time": "Play time",
+  "kb_discord_auth.stats.deaths": "Most deaths",
+  "kb_discord_auth.stats.mob_kills": "Mobs killed",
+  "kb_discord_auth.stats.distance": "Distance",
+  "kb_discord_auth.stats.advancements": "Advancements",
+  "kb_discord_auth.stats.ranking": "Top 10 · %s",
+  "kb_discord_auth.stats.rank": "#%s of %s",
+  "kb_discord_auth.stats.players": "%s players",
+  "kb_discord_auth.stats.refresh": "Refresh",
+  "kb_discord_auth.stats.chat_header": "── Stats of %s ──",
+  "kb_discord_auth.stats.not_found": "No stats found for %s.",
+  "kb_discord_auth.stats.console": "Use /stats <player>.",
+  "kb_discord_auth.stats.unavailable": "Stats are not available right now."
 }

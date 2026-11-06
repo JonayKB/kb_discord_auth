@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 
 import es.jonaykb.kb_discord_auth.config.AuthConfig;
 import es.jonaykb.kb_discord_auth.config.RoleDisplay;
+import es.jonaykb.kb_discord_auth.stats.StatsCommand;
 import es.jonaykb.kb_discord_auth.stats.StatsManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -62,6 +63,7 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         AuthCommands.register(event.getDispatcher());
+        StatsCommand.register(event.getDispatcher());
     }
 
     @SubscribeEvent
