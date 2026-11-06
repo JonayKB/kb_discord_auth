@@ -61,6 +61,7 @@ import net.minecraftforge.fml.loading.FMLPaths;
  * Until AUTHORIZED the player is frozen and can't chat, run commands or interact (see {@link ServerEvents}).
  */
 public final class AuthManager {
+    private static final String LOAD_TEST_MARKER = "kb_load_test";
     private static final Logger LOGGER = LogUtils.getLogger();
     private static volatile AuthManager instance;
 
@@ -166,7 +167,7 @@ public final class AuthManager {
     // ───────────────────────────── join / leave ─────────────────────────────
 
     public void onLogin(ServerPlayer player) {
-        if (!active()) return;
+        if (!active() || isLoadTestBot(player)) return;
         Session s = new Session(player);
         sessions.put(player.getUUID(), s);
         if (!AuthConfig.isConfigured() || callback == null) {
@@ -448,6 +449,14 @@ public final class AuthManager {
         if (!(player instanceof ServerPlayer)) return false;
         Session s = sessions.get(player.getUUID());
         return s != null && s.state != State.AUTHORIZED;
+    }
+
+    /**
+     * Bots from KB Load Test (marked with a profile property that a real client can't send): they don't
+     * log in with Discord and must not show up in stats or rankings.
+     */
+    public static boolean isLoadTestBot(Player player) {
+        return player.getGameProfile().getProperties().containsKey(LOAD_TEST_MARKER);
     }
 
     /** Used by the PlayerList mixin when the server is full. Only trusts accounts that finished a Discord login. */

@@ -16,6 +16,8 @@ Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión c
 
 Va en **cliente y servidor**. Un cliente sin el mod no puede entrar.
 
+Los bots de **KB Load Test** se dejan pasar: no hacen el login de Discord y no salen en las estadísticas, en `/stats` ni en el ranking del bot.
+
 ## Puesta en marcha
 
 ### 1. Aplicación de Discord
