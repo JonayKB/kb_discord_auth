@@ -77,7 +77,11 @@ public final class ServerEvents {
 
     // ───────── login ─────────
 
-    @SubscribeEvent
+    /**
+     * Highest priority so our Hello reaches the client before the packets other mods send on join (e.g. a
+     * difficulty picker): the client then knows the login is pending and holds their screens back.
+     */
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         AuthManager auth = auth();
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
