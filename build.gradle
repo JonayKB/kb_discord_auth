@@ -50,11 +50,21 @@ mixin {
 
 repositories {
     mavenCentral()
+    // Optional third-party mods to test against in runClient/runServer: drop <name>-<version>.jar files here.
+    flatDir { dirs 'testenv/compat-mods' }
 }
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    // ./gradlew runClient -PcompatMods=difficulty_enhancement:0.1,class_enhancement:0.1
+    // Loads those jars from testenv/compat-mods (remapped for the dev environment). Never shipped.
+    if (project.hasProperty('compatMods')) {
+        project.property('compatMods').toString().split(',').each { String mod ->
+            runtimeOnly fg.deobf("local:${mod.trim()}")
+        }
+    }
 }
 
 tasks.named('processResources', ProcessResources).configure {
