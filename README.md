@@ -3,6 +3,7 @@
 Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión con **Discord (OAuth2)** al entrar al servidor.
 
 - **Login obligatorio.** Al entrar aparece una pantalla que no se puede cerrar, con el botón «Iniciar sesión con Discord». Hasta terminar, el jugador está congelado y no puede hablar, usar comandos, romper o colocar bloques, atacar, tirar o recoger objetos, ni recibir daño. Si no lo hace a tiempo, se le expulsa.
+- **El login va primero.** Mientras el login está pendiente, las pantallas que abran otros mods al entrar (elegir dificultad, clase, bienvenida…) se aplazan y se abren en orden al terminar. Las pantallas de Minecraft y Forge no se tocan.
 - **Solo la primera vez.** Tras vincular la cuenta, el servidor le da al cliente un token secreto. En las siguientes entradas se envía solo y no hace falta abrir el navegador. Sirve también en servidores no premium (`online-mode=false`): sin el token, quien use el nombre de otro tiene que iniciar sesión con el Discord de esa cuenta.
 - **Roles en el chat y en el tab (solo visual).** Se toman de Discord con su nombre, color y orden. Se puede mostrar solo el más alto o todos, y excluir roles.
 - **Color del rol sobre la cabeza.** El nombre encima del jugador toma el color de su rol, sin el prefijo.
