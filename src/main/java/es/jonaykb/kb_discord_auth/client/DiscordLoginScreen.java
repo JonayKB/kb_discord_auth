@@ -61,7 +61,9 @@ public class DiscordLoginScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g);
+        // In the waiting room there is nothing to see: cover it, like a loading screen.
+        if (ClientAuth.inLimbo()) renderDirtBackground(g);
+        else renderBackground(g);
         int cx = width / 2;
         int top = height / 2 - 70;
 

@@ -13,6 +13,7 @@ public final class AuthConfig {
 
     public static final ForgeConfigSpec.BooleanValue ENABLED;
     public static final ForgeConfigSpec.BooleanValue ENABLE_IN_SINGLEPLAYER;
+    public static final ForgeConfigSpec.BooleanValue LIMBO;
     public static final ForgeConfigSpec.IntValue LOGIN_TIMEOUT_SECONDS;
     public static final ForgeConfigSpec.IntValue MAX_ACCOUNTS_PER_DISCORD;
     public static final ForgeConfigSpec.ConfigValue<String> SERVER_NAME;
@@ -82,6 +83,9 @@ public final class AuthConfig {
                 .define("enabled", true);
         ENABLE_IN_SINGLEPLAYER = b.comment("Also require Discord on singleplayer / LAN worlds (normally only dedicated servers).")
                 .define("enableInSingleplayer", false);
+        LIMBO = b.comment("While logging in, wait in an empty dimension with the inventory put aside, so someone using another",
+                        "player's name can't see where they are or what they carry. Packets from other mods wait until the login ends.")
+                .define("limbo", true);
         LOGIN_TIMEOUT_SECONDS = b.comment("Seconds a player has to finish the Discord login before being kicked.")
                 .defineInRange("loginTimeoutSeconds", 300, 30, 3600);
         MAX_ACCOUNTS_PER_DISCORD = b.comment("How many Minecraft accounts can be linked to the same Discord account.")

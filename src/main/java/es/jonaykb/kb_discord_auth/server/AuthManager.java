@@ -57,7 +57,8 @@ import net.minecraftforge.fml.loading.FMLPaths;
  *          ├─ valid proof  ─► refresh roles ─► allowed? ─► AUTHORIZED
  *          └─ no / invalid ─► OpenAuth(url) ─► Discord ─► /callback ─► link + new token (key agreement) ─► allowed? ─► AUTHORIZED
  * </pre>
- * Until AUTHORIZED the player is frozen and can't chat, run commands or interact (see {@link ServerEvents}).
+ * Until AUTHORIZED the player is frozen and can't chat, run commands or interact (see {@link ServerEvents}),
+ * and waits in the waiting room (see {@link Limbo}).
  */
 public final class AuthManager {
     private static final String LOAD_TEST_MARKER = "kb_load_test";
@@ -76,6 +77,8 @@ public final class AuthManager {
         final byte[] nonce;
         /** The client's throwaway key, for agreeing on a new token. Null until it answers, or if it sent a bad one. */
         @Nullable PublicKey clientKey;
+        /** Real position and inventory while waiting in the waiting room; null if they wait where they are. */
+        @Nullable Limbo.Stash limbo;
 
         Session(ServerPlayer p, byte[] nonce) {
             this.nonce = nonce;
@@ -179,10 +182,12 @@ public final class AuthManager {
     // ───────────────────────────── join / leave ─────────────────────────────
 
     public void onLogin(ServerPlayer player) {
+        Limbo.Stash stash = Limbo.take(player);
         if (!active() || isLoadTestBot(player)) return;
         byte[] nonce = new byte[AuthCrypto.NONCE_BYTES];
         random.nextBytes(nonce);
         Session s = new Session(player, nonce);
+        s.limbo = stash;
         sessions.put(player.getUUID(), s);
         if (!AuthConfig.isConfigured() || callback == null) {
             kick(player, AuthConfig.MSG_KICK_MISCONFIGURED.get());
@@ -346,6 +351,8 @@ public final class AuthManager {
             return deny;
         }
         s.state = State.AUTHORIZED;
+        Limbo.leave(server, p, s.limbo);
+        s.limbo = null;
         Network.sendTo(p, new AuthDonePacket(newTokenKey == null ? new byte[0] : newTokenKey));
         refreshName(p);
         sendNameTagsTo(p);
@@ -457,7 +464,9 @@ public final class AuthManager {
                 continue;
             }
             // Freeze: keep them where they joined (they can still look around).
-            if (p.level().dimension() == s.dimension && p.distanceToSqr(s.x, s.y, s.z) > 0.01) {
+            if (s.limbo != null) {
+                Limbo.hold(server, p, s.limbo);
+            } else if (p.level().dimension() == s.dimension && p.distanceToSqr(s.x, s.y, s.z) > 0.01) {
                 p.connection.teleport(s.x, s.y, s.z, p.getYRot(), p.getXRot());
             }
             p.fallDistance = 0;

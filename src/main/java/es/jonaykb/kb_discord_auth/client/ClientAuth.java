@@ -19,7 +19,9 @@ import es.jonaykb.kb_discord_auth.network.HelloPacket;
 import es.jonaykb.kb_discord_auth.network.Network;
 import es.jonaykb.kb_discord_auth.network.OpenAuthPacket;
 import es.jonaykb.kb_discord_auth.network.TokenPacket;
+import es.jonaykb.kb_discord_auth.server.Limbo;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
@@ -159,7 +161,14 @@ public final class ClientAuth {
     /** Keeps the login screen up: if something closes it, open it again. Afterwards, opens the held-back screens. */
     static void tick() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.screen != null) return;
+        if (mc.player == null) return;
+        // The death screen of a player who joins dead would hide the login, and they can't respawn before it.
+        // Cover it; when the login is done, Minecraft opens it again by itself.
+        if (mc.screen instanceof DeathScreen && mode != Mode.NONE) {
+            show();
+            return;
+        }
+        if (mc.screen != null) return;
         if (mode == Mode.NONE) {
             Screen next = deferred.pollFirst();
             if (next != null) {
@@ -168,12 +177,18 @@ public final class ClientAuth {
             }
         } else if (mode == Mode.LOGIN) {
             show();
-        } else if (mode == Mode.CHECKING && System.currentTimeMillis() - checkingSince >= CHECKING_GRACE_MS) {
+        } else if (mode == Mode.CHECKING && (inLimbo() || System.currentTimeMillis() - checkingSince >= CHECKING_GRACE_MS)) {
             show();
         }
     }
 
-    private static void refreshIfOpen() {
+    /** True while the server keeps us in its waiting room (see {@code Limbo}): an empty dimension to cover up. */
+    static boolean inLimbo() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.level != null && mc.level.dimension() == Limbo.LEVEL;
+    }
+
+        private static void refreshIfOpen() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen instanceof DiscordLoginScreen screen) screen.refresh();
     }
