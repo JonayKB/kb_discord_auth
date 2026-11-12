@@ -140,6 +140,11 @@ public final class LinkStore {
         return n;
     }
 
+    /** Every link. Server thread only. */
+    public void forEach(java.util.function.BiConsumer<UUID, LinkRecord> action) {
+        data.links.forEach((uuid, r) -> action.accept(UUID.fromString(uuid), r));
+    }
+
     public Collection<String> names() {
         List<String> out = new ArrayList<>();
         for (LinkRecord r : data.links.values()) {

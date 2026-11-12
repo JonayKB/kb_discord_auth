@@ -13,6 +13,7 @@ Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión c
 - **Plaza reservada.** Un rol puede entrar aunque el servidor esté lleno.
 - **Tab con estadísticas.** Arriba, el nombre del servidor y los jugadores conectados. Abajo, cada jugador ve las suyas: tiempo jugado, muertes, mobs matados, distancia y logros.
 - **Ranking en el juego.** `/stats` abre una pantalla con botones: el top 10 de cada estadística (con todos los jugadores, también los desconectados) y tu puesto aunque no estés en el top, como `/ranking` en Discord, y una pestaña con todas tus estadísticas. `/stats <jugador>` muestra las de otro en el chat. Solo totales: el ranking semanal lo calcula el bot.
+- **Login con Discord en webs del servidor.** Opcional: la misma aplicación de Discord sirve para iniciar sesión en, por ejemplo, la web de BlueMap. Lo usa [KB BlueMap Claims](https://github.com/JonayKB/kb_bluemap_claims) para enseñarte tu vida y la de tu party, y para seguir a tu personaje. Ver [Login en webs](#login-en-webs-bluemap).
 - **Estadísticas para KB Discord Bot.** Opcional: el servidor envía esas estadísticas al bot para publicar un ranking (total y semanal) en un canal. El formato está en [`docs/stats-contract.md`](docs/stats-contract.md).
 
 Va en **cliente y servidor**. Un cliente sin el mod no puede entrar.
@@ -48,6 +49,11 @@ botToken = "..."                                           # opcional, recomenda
 [http]
 bindAddress = "0.0.0.0"   # 127.0.0.1 si usas nginx/Caddy delante
 port = 8085               # ábrelo en el firewall si no hay proxy
+
+[web]
+enabled = false                                      # login en webs (ver «Login en webs»)
+allowedOrigins = ["https://minecraft.tudominio.com"] # webs que pueden usarlo: esquema://host[:puerto], sin ruta
+sessionDays = 30                                     # días que dura la sesión en la web
 
 [access]
 requireGuildMember = true
@@ -149,6 +155,30 @@ entra ─► pantalla de login ─► el cliente envía su token guardado
 - Una cuenta de Minecraft ya vinculada no se puede vincular a otro Discord (usa `unlink`). Por defecto, un Discord admite una sola cuenta de Minecraft (`maxAccountsPerDiscord`).
 - Si Discord no responde, se usan los últimos roles guardados.
 
+### Login en webs (BlueMap)
+
+Con `[web] enabled = true`, el servidor HTTP del callback también hace el login de Discord para las webs de `allowedOrigins`. Usa la misma `redirectUri`, así que en Discord no hay que añadir nada. Solo pide el permiso `identify`.
+
+```
+web ─► GET /web/login?return=URL ─► Discord ─► /callback ─► URL?kbauth=CÓDIGO   (un solo uso, 2 min)
+web ─► POST /web/session (CÓDIGO) ─► token de sesión (lo guarda el navegador)
+web ─► GET /web/me · GET /web/api/<nombre> · POST /web/logout   (Authorization: Bearer <token>)
+```
+
+- La web solo ve las cuentas de Minecraft vinculadas a ese Discord que ahora mismo pueden entrar al servidor (mismas reglas de roles que al entrar). Quien nunca ha entrado al servidor no tiene ninguna.
+- Las sesiones están en `config/kb_discord_auth/web_sessions.json`, guardadas como hash. Sobreviven a los reinicios.
+- Solo se devuelve a URLs de `allowedOrigins`, y solo esas webs reciben las cabeceras CORS.
+- **HTTPS:** si la web va por `https://`, el login también tiene que ir por `https://` (el navegador bloquea mezclar). Con nginx delante, p. ej. `auth.tudominio.com` → `127.0.0.1:8085` y `minecraft.tudominio.com` → BlueMap, no hace falta nada más.
+
+**Para otros mods.** Un mod puede responder en `/web/api/<nombre>` enviando un mensaje IMC a `kb_discord_auth` con el método `web_api` y este contenido:
+
+```java
+BiFunction<Map<UUID, String>, Map<String, String>, String> handler = (accounts, query) -> "{...}";
+InterModComms.sendTo("kb_discord_auth", "web_api", () -> Map.entry("nombre", handler));
+```
+
+`accounts` son las cuentas (UUID → nombre) del Discord que ha iniciado sesión, de la vinculada más recientemente a la más antigua, y `query` son los parámetros de la URL. Devuelve el JSON, o `null` para un 404. Se llama desde un hilo HTTP, no desde el del servidor. No hace falta depender del código de este mod.
+
 ### Límites conocidos
 
 - **Plaza reservada en modo offline.** Cuando el servidor está lleno, la decisión se toma antes de recibir el token, solo por el nombre y con los roles guardados. Alguien que use el nombre de un jugador con plaza reservada ocuparía una plaza hasta que se le expulse por no iniciar sesión (`loginTimeoutSeconds`).
@@ -164,7 +194,7 @@ entra ─► pantalla de login ─► el cliente envía su token guardado
 ./gradlew runClient    # carpeta run-client/ (separada para no pisar la config del servidor)
 ```
 
-Para probar sin Discord real, arranca el servidor con `-Dkb_discord_auth.apiBase=http://127.0.0.1:PUERTO/api/v10` apuntando a una API falsa, y el cliente con `-Dkb_discord_auth.cdnBase=http://127.0.0.1:PUERTO` para las fotos.
+Para probar sin Discord real, arranca el servidor con `-Dkb_discord_auth.apiBase=http://127.0.0.1:PUERTO/api/v10` apuntando a una API falsa (y `-Dkb_discord_auth.authorizeUrl=http://127.0.0.1:PUERTO/oauth2/authorize` para el login en webs), y el cliente con `-Dkb_discord_auth.cdnBase=http://127.0.0.1:PUERTO` para las fotos.
 
 ## Licencia
 

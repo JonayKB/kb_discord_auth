@@ -41,15 +41,19 @@ final class CallbackServer {
         http = HttpServer.create(new InetSocketAddress(AuthConfig.HTTP_BIND_ADDRESS.get(), AuthConfig.HTTP_PORT.get()), 0);
         http.createContext("/", exchange -> {
             try (exchange) {
-                if (!"GET".equals(exchange.getRequestMethod())) {
+                String reqPath = exchange.getRequestURI().getPath();
+                WebAuth web = auth.web();
+                if (reqPath.startsWith("/web/") && web != null) {
+                    web.handle(exchange);
+                } else if (!"GET".equals(exchange.getRequestMethod())) {
                     exchange.sendResponseHeaders(405, -1);
-                } else if (!exchange.getRequestURI().getPath().equals(callbackPath)) {
+                } else if (!reqPath.equals(callbackPath)) {
                     exchange.sendResponseHeaders(404, -1);
                 } else {
                     handleCallback(exchange);
                 }
             } catch (Exception e) {
-                LOGGER.warn("Error handling Discord callback", e);
+                LOGGER.warn("Error handling HTTP request {}", exchange.getRequestURI().getPath(), e);
             }
         });
         AtomicInteger n = new AtomicInteger();
@@ -70,6 +74,11 @@ final class CallbackServer {
 
     private void handleCallback(HttpExchange exchange) throws IOException {
         Map<String, String> q = parseQuery(exchange.getRequestURI().getRawQuery());
+        WebAuth web = auth.web();
+        if (web != null && web.ownsState(q.get("state"))) {
+            web.handleCallback(exchange, q);
+            return;
+        }
         CallbackResult result;
         if (q.containsKey("error")) {
             // The player pressed "Cancel" on Discord. Their link in Minecraft is still valid.
@@ -89,14 +98,18 @@ final class CallbackServer {
         }
     }
 
-    private static Map<String, String> parseQuery(String raw) {
+    static Map<String, String> parseQuery(String raw) {
         Map<String, String> out = new HashMap<>();
         if (raw == null) return out;
         for (String pair : raw.split("&")) {
             int i = pair.indexOf('=');
             if (i <= 0) continue;
-            out.put(URLDecoder.decode(pair.substring(0, i), StandardCharsets.UTF_8),
-                    URLDecoder.decode(pair.substring(i + 1), StandardCharsets.UTF_8));
+            try {
+                out.put(URLDecoder.decode(pair.substring(0, i), StandardCharsets.UTF_8),
+                        URLDecoder.decode(pair.substring(i + 1), StandardCharsets.UTF_8));
+            } catch (IllegalArgumentException ignored) {
+                // malformed %-escape: skip the pair
+            }
         }
         return out;
     }

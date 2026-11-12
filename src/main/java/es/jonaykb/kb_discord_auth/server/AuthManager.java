@@ -99,6 +99,7 @@ public final class AuthManager {
     private final ExecutorService worker;
     private final SecureRandom random = new SecureRandom();
     @Nullable private CallbackServer callback;
+    @Nullable private WebAuth web;
     /** Discord roles of the guild by id. Replaced as a whole, so it is safe to read from any thread. */
     private volatile Map<String, GuildRole> guildRoles = Map.of();
     private long ticks;
@@ -134,6 +135,7 @@ public final class AuthManager {
                     + "config/kb_discord_auth-common.toml. Players will be kicked until then.");
             return;
         }
+        if (AuthConfig.WEB_ENABLED.get()) m.web = new WebAuth(server, m);
         try {
             CallbackServer cb = new CallbackServer(m);
             cb.start();
@@ -158,6 +160,12 @@ public final class AuthManager {
         if (m.callback != null) m.callback.stop();
         m.worker.shutdownNow();
         m.store.save();
+    }
+
+    /** Web login, or null when web.enabled is false. */
+    @Nullable
+    WebAuth web() {
+        return web;
     }
 
     public boolean active() {
@@ -328,7 +336,7 @@ public final class AuthManager {
     }
 
     @Nullable
-    private static String denyReason(LinkRecord r) {
+    static String denyReason(LinkRecord r) {
         if (AuthConfig.REQUIRE_GUILD_MEMBER.get() && !r.inGuild) return AuthConfig.MSG_KICK_NOT_IN_GUILD.get();
         List<? extends String> required = AuthConfig.REQUIRED_ROLES.get();
         if (!required.isEmpty() && !hasAny(r.roles, required)) {
