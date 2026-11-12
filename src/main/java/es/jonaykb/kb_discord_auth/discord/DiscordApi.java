@@ -27,6 +27,8 @@ import es.jonaykb.kb_discord_auth.config.AuthConfig;
 public final class DiscordApi {
     /** Only for testing against a fake Discord: -Dkb_discord_auth.apiBase=http://127.0.0.1:18999/api/v10 */
     private static final String API = System.getProperty("kb_discord_auth.apiBase", "https://discord.com/api/v10");
+    /** Only for testing against a fake Discord: -Dkb_discord_auth.authorizeUrl=http://127.0.0.1:18999/oauth2/authorize */
+    private static final String AUTHORIZE = System.getProperty("kb_discord_auth.authorizeUrl", "https://discord.com/oauth2/authorize");
     private static final String USER_AGENT = "DiscordBot (https://github.com/JonayKB/kb_discord_auth, 1.3)";
 
     public record TokenResponse(String accessToken, String refreshToken, long expiresAtMillis) {}
@@ -65,14 +67,18 @@ public final class DiscordApi {
     }
 
     public static String authorizeUrl(String state) {
+        return authorizeUrl(state, scopes());
+    }
+
+    public static String authorizeUrl(String state, String scopes) {
         Map<String, String> q = new LinkedHashMap<>();
         q.put("client_id", AuthConfig.CLIENT_ID.get());
         q.put("response_type", "code");
         q.put("redirect_uri", AuthConfig.REDIRECT_URI.get());
-        q.put("scope", scopes());
+        q.put("scope", scopes);
         q.put("state", state);
         q.put("prompt", "none");
-        return "https://discord.com/oauth2/authorize?" + form(q);
+        return AUTHORIZE + "?" + form(q);
     }
 
     public TokenResponse exchangeCode(String code) throws IOException, InterruptedException {

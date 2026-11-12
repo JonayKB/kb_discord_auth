@@ -37,6 +37,10 @@ public final class AuthConfig {
     public static final ForgeConfigSpec.ConfigValue<String> HTTP_BIND_ADDRESS;
     public static final ForgeConfigSpec.IntValue HTTP_PORT;
 
+    public static final ForgeConfigSpec.BooleanValue WEB_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> WEB_ALLOWED_ORIGINS;
+    public static final ForgeConfigSpec.IntValue WEB_SESSION_DAYS;
+
     public static final ForgeConfigSpec.BooleanValue REQUIRE_GUILD_MEMBER;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> REQUIRED_ROLES;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> BYPASS_FULL_ROLES;
@@ -105,6 +109,17 @@ public final class AuthConfig {
                 .define("bindAddress", "0.0.0.0");
         HTTP_PORT = b.comment("Port to listen on (open it in the firewall unless you use a reverse proxy).")
                 .defineInRange("port", 8085, 1, 65535);
+        b.pop();
+
+        b.comment("Log in with Discord on websites of this server (e.g. the BlueMap web), using the same redirectUri.",
+                "Other mods (KB BlueMap Claims) add their own data behind this login.").push("web");
+        WEB_ENABLED = b.comment("Allow logging in from the websites listed in allowedOrigins.")
+                .define("enabled", false);
+        WEB_ALLOWED_ORIGINS = b.comment("Websites that can use the login, as scheme://host[:port] with no path,",
+                        "e.g. [\"https://minecraft.example.com\"]. Nothing else can read the session or the data.")
+                .defineListAllowEmpty(List.of("allowedOrigins"), List::of, AuthConfig::isOrigin);
+        WEB_SESSION_DAYS = b.comment("Days a web login lasts before asking for Discord again.")
+                .defineInRange("sessionDays", 30, 1, 365);
         b.pop();
 
         b.comment("Who can join").push("access");
@@ -215,6 +230,10 @@ public final class AuthConfig {
 
     private static boolean isSnowflake(Object o) {
         return o instanceof String s && s.matches("\\d{5,25}");
+    }
+
+    private static boolean isOrigin(Object o) {
+        return o instanceof String s && s.matches("https?://[A-Za-z0-9.-]+(:\\d{1,5})?");
     }
 
     public static boolean isConfigured() {
