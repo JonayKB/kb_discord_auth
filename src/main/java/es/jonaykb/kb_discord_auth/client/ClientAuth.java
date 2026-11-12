@@ -1,13 +1,19 @@
 package es.jonaykb.kb_discord_auth.client;
 
+import java.security.KeyPair;
+import java.security.PublicKey;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Locale;
 import java.util.UUID;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 
+import es.jonaykb.kb_discord_auth.network.AuthCrypto;
 import es.jonaykb.kb_discord_auth.network.AuthDonePacket;
 import es.jonaykb.kb_discord_auth.network.HelloPacket;
 import es.jonaykb.kb_discord_auth.network.Network;
@@ -15,6 +21,8 @@ import es.jonaykb.kb_discord_auth.network.OpenAuthPacket;
 import es.jonaykb.kb_discord_auth.network.TokenPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraftforge.client.event.ScreenEvent;
 
 /** Client state of the login. Only touched on the render thread. */
@@ -29,6 +37,10 @@ public final class ClientAuth {
     private static Mode mode = Mode.NONE;
     private static String serverId;
     private static UUID playerId;
+    /** Address we connected to, as typed in the server list (normalized). Part of the token key. */
+    private static String address;
+    /** Throwaway key pair of this join, for agreeing on a new token with the server. */
+    @Nullable private static KeyPair keys;
     private static String url = "";
     private static String message = "";
     private static long deadline;
@@ -46,13 +58,32 @@ public final class ClientAuth {
     static String message() { return message; }
     static long deadline() { return deadline; }
 
+    /**
+     * Tokens are kept per address we connected to, not only per the server id the server claims: another server
+     * could send this server's id to make us use its token. It still gets no token for its own address.
+     */
     private static String key() {
+        return address + "/" + serverId + "/" + playerId;
+    }
+
+    /** Key of tokens saved by older versions, before tokens were tied to the address. */
+    private static String legacyKey() {
         return serverId + "/" + playerId;
+    }
+
+    private static String currentAddress() {
+        Minecraft mc = Minecraft.getInstance();
+        ServerData data = mc.getCurrentServer();
+        if (data == null) return mc.isLocalServer() ? "local" : "unknown";
+        ServerAddress a = ServerAddress.parseString(data.ip);
+        return a.getHost().toLowerCase(Locale.ROOT) + ":" + a.getPort();
     }
 
     public static void onHello(HelloPacket p) {
         serverId = p.serverId();
         playerId = p.playerId();
+        address = currentAddress();
+        keys = AuthCrypto.newKeyPair();
         mode = Mode.CHECKING;
         url = "";
         message = "";
@@ -61,7 +92,13 @@ public final class ClientAuth {
         // tick() opens it if the check takes longer than CHECKING_GRACE_MS.
         refreshIfOpen();
         String token = ClientTokenStore.get(key());
-        Network.CHANNEL.sendToServer(new TokenPacket(token == null ? "" : token));
+        if (token == null) {
+            // One-time move of a token saved by an older version: from now on it only works at this address.
+            token = ClientTokenStore.take(legacyKey());
+            if (token != null) ClientTokenStore.put(key(), token);
+        }
+        String proof = token == null ? "" : AuthCrypto.proof(token, serverId, playerId, p.nonce());
+        Network.CHANNEL.sendToServer(new TokenPacket(proof, keys.getPublic().getEncoded()));
     }
 
     public static void onOpenAuth(OpenAuthPacket p) {
@@ -73,7 +110,13 @@ public final class ClientAuth {
     }
 
     public static void onDone(AuthDonePacket p) {
-        if (!p.token().isEmpty() && serverId != null) ClientTokenStore.put(key(), p.token());
+        if (p.serverPublicKey().length > 0 && serverId != null && keys != null) {
+            PublicKey serverKey = AuthCrypto.readPublicKey(p.serverPublicKey());
+            String token = serverKey == null ? null
+                    : AuthCrypto.deriveToken(keys.getPrivate(), serverKey, serverId, playerId);
+            if (token != null) ClientTokenStore.put(key(), token);
+            else LOGGER.warn("The server sent an invalid key: the Discord login won't be remembered");
+        }
         mode = Mode.NONE;
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen instanceof DiscordLoginScreen) mc.setScreen(null);
@@ -83,6 +126,8 @@ public final class ClientAuth {
         mode = Mode.NONE;
         serverId = null;
         playerId = null;
+        address = null;
+        keys = null;
         url = "";
         message = "";
         checkingSince = 0;
