@@ -2,19 +2,28 @@ package es.jonaykb.kb_discord_auth.mixin;
 
 import java.net.SocketAddress;
 
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.mojang.authlib.GameProfile;
 
 import es.jonaykb.kb_discord_auth.server.AuthManager;
+import es.jonaykb.kb_discord_auth.server.Limbo;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 
 @Mixin(PlayerList.class)
 public abstract class PlayerListMixin {
+    @Shadow @Final private MinecraftServer server;
+
     /** Lets players with a "bypass full" Discord role join when the server is full (integrated/LAN servers). */
     @Inject(method = "canBypassPlayerLimit", at = @At("HEAD"), cancellable = true)
     private void kbDiscordAuth$bypassFull(GameProfile profile, CallbackInfoReturnable<Boolean> cir) {
@@ -32,5 +41,22 @@ public abstract class PlayerListMixin {
         if (cir.getReturnValue() != null) return;
         Component reason = AuthManager.duplicateLoginReason(profile);
         if (reason != null) cir.setReturnValue(reason);
+    }
+
+    /** Sends the joining player to the waiting room before the client learns where they really are. */
+    @Inject(method = "load", at = @At("RETURN"), cancellable = true)
+    private void kbDiscordAuth$toLimbo(ServerPlayer player, CallbackInfoReturnable<CompoundTag> cir) {
+        cir.setReturnValue(Limbo.onLoad(server, player, cir.getReturnValue()));
+    }
+
+    /** A player in the waiting room is not saved: their file keeps their real position and inventory. */
+    @Inject(method = "save", at = @At("HEAD"), cancellable = true)
+    private void kbDiscordAuth$skipLimboSave(ServerPlayer player, CallbackInfo ci) {
+        if (Limbo.skipSave(player)) ci.cancel();
+    }
+
+    @Inject(method = "remove", at = @At("RETURN"))
+    private void kbDiscordAuth$forgetLimbo(ServerPlayer player, CallbackInfo ci) {
+        Limbo.forget(player);
     }
 }
