@@ -22,7 +22,7 @@ import com.mojang.logging.LogUtils;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 /**
- * Session tokens the servers gave us, one per server + Minecraft account, in
+ * Session tokens the servers gave us, one per address + server + Minecraft account, in
  * config/kb_discord_auth/client_tokens.json. Sending it on join skips the Discord login.
  */
 final class ClientTokenStore {
@@ -56,6 +56,19 @@ final class ClientTokenStore {
     static void put(String key, String token) {
         Map<String, String> m = read();
         m.put(key, token);
+        write(m);
+    }
+
+    /** Removes and returns the token saved under {@code key}, or null. */
+    @Nullable
+    static String take(String key) {
+        Map<String, String> m = read();
+        String token = m.remove(key);
+        if (token != null) write(m);
+        return token;
+    }
+
+    private static void write(Map<String, String> m) {
         Path f = file();
         try {
             Files.createDirectories(f.getParent());

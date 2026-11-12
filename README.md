@@ -4,7 +4,7 @@ Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión c
 
 - **Login obligatorio.** Al entrar aparece una pantalla que no se puede cerrar, con el botón «Iniciar sesión con Discord». Hasta terminar, el jugador está congelado y no puede hablar, usar comandos, romper o colocar bloques, atacar, tirar o recoger objetos, ni recibir daño. Si no lo hace a tiempo, se le expulsa.
 - **El login va primero.** Mientras el login está pendiente, las pantallas que abran otros mods al entrar (elegir dificultad, clase, bienvenida…) se aplazan y se abren en orden al terminar. Las pantallas de Minecraft y Forge no se tocan.
-- **Solo la primera vez.** Tras vincular la cuenta, el servidor le da al cliente un token secreto. En las siguientes entradas se envía solo y no hace falta abrir el navegador. Sirve también en servidores no premium (`online-mode=false`): sin el token, quien use el nombre de otro tiene que iniciar sesión con el Discord de esa cuenta.
+- **Solo la primera vez.** Tras vincular la cuenta, el cliente guarda un token secreto. En las siguientes entradas lo demuestra solo y no hace falta abrir el navegador. Sirve también en servidores no premium (`online-mode=false`): sin el token, quien use el nombre de otro tiene que iniciar sesión con el Discord de esa cuenta. Ver [Servidores no premium](#servidores-no-premium).
 - **Roles en el chat y en el tab (solo visual).** Se toman de Discord con su nombre, color y orden. Se puede mostrar solo el más alto o todos, y excluir roles.
 - **Color del rol sobre la cabeza.** El nombre encima del jugador toma el color de su rol, sin el prefijo.
 - **Hover en el chat.** Al pasar el ratón por el nombre se ve el `@` de Discord.
@@ -145,13 +145,13 @@ Para administradores (permiso 3):
 ## Cómo funciona
 
 ```
-entra ─► pantalla de login ─► el cliente envía su token guardado
-          ├─ token válido ──► lee los roles ─► ¿tiene acceso? ─► juega
-          └─ sin token ─────► navegador ─► Discord ─► /callback ─► vincula y da un token nuevo ─► ¿tiene acceso? ─► juega
+entra ─► pantalla de login ─► el servidor manda un reto ─► el cliente lo firma con su token guardado (el token no se envía)
+          ├─ firma válida ──► lee los roles ─► ¿tiene acceso? ─► juega
+          └─ sin token ─────► navegador ─► Discord ─► /callback ─► vincula y acuerda un token nuevo ─► ¿tiene acceso? ─► juega
 ```
 
-- Los vínculos están en `config/kb_discord_auth/links.json` (servidor). Se guarda un hash del token, no el token. Edítalo solo con el servidor apagado, porque al cerrarse lo sobrescribe.
-- Los tokens del cliente están en `config/kb_discord_auth/client_tokens.json`, uno por servidor y cuenta. Si se borra, el jugador vuelve a iniciar sesión con Discord.
+- Los vínculos están en `config/kb_discord_auth/links.json` (servidor). Se guarda un hash del token, no el token, pero con ese hash se puede firmar el reto: **trátalo como secreto**. Edítalo solo con el servidor apagado, porque al cerrarse lo sobrescribe.
+- Los tokens del cliente están en `config/kb_discord_auth/client_tokens.json`, uno por dirección del servidor, servidor y cuenta. Si se borra, el jugador vuelve a iniciar sesión con Discord.
 - Una cuenta de Minecraft ya vinculada no se puede vincular a otro Discord (usa `unlink`). Por defecto, un Discord admite una sola cuenta de Minecraft (`maxAccountsPerDiscord`).
 - Si Discord no responde, se usan los últimos roles guardados.
 
@@ -179,9 +179,18 @@ InterModComms.sendTo("kb_discord_auth", "web_api", () -> Map.entry("nombre", han
 
 `accounts` son las cuentas (UUID → nombre) del Discord que ha iniciado sesión, de la vinculada más recientemente a la más antigua, y `query` son los parámetros de la URL. Devuelve el JSON, o `null` para un 404. Se llama desde un hilo HTTP, no desde el del servidor. No hace falta depender del código de este mod.
 
+### Servidores no premium
+
+Con `online-mode=false` cualquiera puede entrar con cualquier nombre y la conexión no va cifrada. Por eso:
+
+- **No se puede echar a quien ya está dentro.** Si entra alguien con el nombre de un jugador conectado que ya ha iniciado sesión, se rechaza la conexión nueva (`kickAlreadyOnline`) en vez de echar al que estaba. Si el que estaba aún no ha iniciado sesión, el nuevo lo sustituye, para que un impostor no pueda quedarse con el nombre.
+- **El token nunca viaja por la red.** Al entrar, el servidor manda un reto aleatorio y el cliente responde con un HMAC del token. El token nuevo se acuerda con un intercambio de claves X25519, así que tampoco se envía. Quien espíe la conexión no puede reutilizar nada.
+- **El token va ligado a la dirección.** El cliente guarda el token según la dirección a la que se conectó (p. ej. `play.tudominio.com:25565`), así que otro servidor no puede pedírselo haciéndose pasar por este. Si un jugador entra por otra dirección (la IP en vez del dominio), tendrá que iniciar sesión con Discord una vez más. Los tokens de versiones anteriores pasan a la primera dirección con la que se entre.
+
 ### Límites conocidos
 
 - **Plaza reservada en modo offline.** Cuando el servidor está lleno, la decisión se toma antes de recibir el token, solo por el nombre y con los roles guardados. Alguien que use el nombre de un jugador con plaza reservada ocuparía una plaza hasta que se le expulse por no iniciar sesión (`loginTimeoutSeconds`).
+- **Un servidor falso puede pedir el login de Discord.** Si un jugador entra en un servidor malicioso, este le puede enseñar la pantalla de login con el enlace de este servidor y quedarse con la sesión si el jugador lo completa. Es el mismo riesgo que cualquier login con enlace; avisa a los jugadores de que solo inicien sesión en vuestro servidor.
 - **Sin bot**, los refresh tokens de Discord se guardan en claro en `links.json`. Con `botToken` no se guarda ninguno.
 - En mundos de un jugador o LAN está desactivado (`enableInSingleplayer`).
 - La foto de perfil solo se dibuja en el chat y en el tab. En otros sitios donde Minecraft muestra el nombre, como la pantalla de muerte, queda un hueco pequeño delante del nombre, y en la consola del servidor, un espacio.

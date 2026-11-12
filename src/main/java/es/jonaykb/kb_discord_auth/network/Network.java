@@ -13,7 +13,7 @@ public final class Network {
      * Both sides must have exactly this version. Clients without the mod report the channel as
      * absent, which does not match, so Forge refuses them on login: the mod is required on the client.
      */
-    private static final String VERSION = "3";
+    private static final String VERSION = "4";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(KbDiscordAuth.MOD_ID, "main"),

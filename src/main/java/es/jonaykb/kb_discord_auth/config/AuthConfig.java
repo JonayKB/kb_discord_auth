@@ -68,6 +68,8 @@ public final class AuthConfig {
     public static final ForgeConfigSpec.ConfigValue<String> MSG_KICK_MISSING_ROLE;
     public static final ForgeConfigSpec.ConfigValue<String> MSG_KICK_MISCONFIGURED;
     public static final ForgeConfigSpec.ConfigValue<String> MSG_KICK_UNLINKED;
+    public static final ForgeConfigSpec.ConfigValue<String> MSG_KICK_ALREADY_ONLINE;
+    public static final ForgeConfigSpec.ConfigValue<String> MSG_KICK_BAD_CLIENT;
     public static final ForgeConfigSpec.ConfigValue<String> MSG_LINKED_TO_OTHER;
     public static final ForgeConfigSpec.ConfigValue<String> MSG_TOO_MANY_ACCOUNTS;
     public static final ForgeConfigSpec.ConfigValue<String> MSG_BLOCKED;
@@ -218,6 +220,8 @@ public final class AuthConfig {
         MSG_KICK_MISSING_ROLE = b.define("kickMissingRole", "No tienes el rol de Discord necesario para entrar.");
         MSG_KICK_MISCONFIGURED = b.define("kickMisconfigured", "El login con Discord no está configurado en el servidor. Avisa al staff.");
         MSG_KICK_UNLINKED = b.define("kickUnlinked", "Tu vínculo con Discord se ha eliminado. Vuelve a entrar.");
+        MSG_KICK_ALREADY_ONLINE = b.define("kickAlreadyOnline", "Ya hay alguien conectado con esta cuenta. Si eras tú, espera unos segundos y vuelve a entrar.");
+        MSG_KICK_BAD_CLIENT = b.define("kickBadClient", "Tu cliente no ha enviado una clave válida para el login. Vuelve a entrar.");
         MSG_LINKED_TO_OTHER = b.define("linkedToOther", "Esta cuenta de Minecraft ya está vinculada a otro Discord. Inicia sesión con ese Discord o pide al staff que la desvincule.");
         MSG_TOO_MANY_ACCOUNTS = b.define("tooManyAccounts", "Tu Discord ya está vinculado al máximo de cuentas de Minecraft permitido.");
         MSG_BLOCKED = b.define("blocked", "&cInicia sesión con Discord antes de hacer nada.");

@@ -1,14 +1,12 @@
 package es.jonaykb.kb_discord_auth.server;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.security.KeyPair;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,6 +32,7 @@ import es.jonaykb.kb_discord_auth.discord.DiscordApi.DiscordUser;
 import es.jonaykb.kb_discord_auth.discord.DiscordApi.GuildRole;
 import es.jonaykb.kb_discord_auth.discord.DiscordApi.Membership;
 import es.jonaykb.kb_discord_auth.discord.DiscordApi.TokenResponse;
+import es.jonaykb.kb_discord_auth.network.AuthCrypto;
 import es.jonaykb.kb_discord_auth.network.AuthDonePacket;
 import es.jonaykb.kb_discord_auth.network.HelloPacket;
 import es.jonaykb.kb_discord_auth.network.NameTagColorPacket;
@@ -54,9 +53,9 @@ import net.minecraftforge.fml.loading.FMLPaths;
  * which run on {@link #worker} or on the callback HTTP threads.
  *
  * <pre>
- * join ─► Hello ─► client sends its saved token
- *          ├─ valid token  ─► refresh roles ─► allowed? ─► AUTHORIZED
- *          └─ no / invalid ─► OpenAuth(url) ─► Discord ─► /callback ─► link + new token ─► allowed? ─► AUTHORIZED
+ * join ─► Hello(nonce) ─► client proves it holds its saved token (HMAC, the token isn't sent)
+ *          ├─ valid proof  ─► refresh roles ─► allowed? ─► AUTHORIZED
+ *          └─ no / invalid ─► OpenAuth(url) ─► Discord ─► /callback ─► link + new token (key agreement) ─► allowed? ─► AUTHORIZED
  * </pre>
  * Until AUTHORIZED the player is frozen and can't chat, run commands or interact (see {@link ServerEvents}).
  */
@@ -73,8 +72,13 @@ public final class AuthManager {
         final double x, y, z;
         State state = State.WAITING_TOKEN;
         @Nullable String oauthState;
+        /** Sent in the Hello; the client's proof must be made with it. */
+        final byte[] nonce;
+        /** The client's throwaway key, for agreeing on a new token. Null until it answers, or if it sent a bad one. */
+        @Nullable PublicKey clientKey;
 
-        Session(ServerPlayer p) {
+        Session(ServerPlayer p, byte[] nonce) {
+            this.nonce = nonce;
             dimension = p.level().dimension();
             x = p.getX();
             y = p.getY();
@@ -176,13 +180,15 @@ public final class AuthManager {
 
     public void onLogin(ServerPlayer player) {
         if (!active() || isLoadTestBot(player)) return;
-        Session s = new Session(player);
+        byte[] nonce = new byte[AuthCrypto.NONCE_BYTES];
+        random.nextBytes(nonce);
+        Session s = new Session(player, nonce);
         sessions.put(player.getUUID(), s);
         if (!AuthConfig.isConfigured() || callback == null) {
             kick(player, AuthConfig.MSG_KICK_MISCONFIGURED.get());
             return;
         }
-        Network.sendTo(player, new HelloPacket(store.serverId(), player.getUUID()));
+        Network.sendTo(player, new HelloPacket(store.serverId(), player.getUUID(), nonce));
     }
 
     public void onLogout(ServerPlayer player) {
@@ -193,14 +199,19 @@ public final class AuthManager {
         }
     }
 
-    /** The client answered the Hello with its saved token ("" if none). */
-    public void onToken(ServerPlayer player, String token) {
+    /**
+     * The client answered the Hello: a proof that it holds its saved token ("" if it has none) and its throwaway
+     * public key. See {@link AuthCrypto}: the token itself never travels.
+     */
+    public void onToken(ServerPlayer player, String proof, byte[] publicKey) {
         UUID uuid = player.getUUID();
         Session s = sessions.get(uuid);
         if (s == null || s.state != State.WAITING_TOKEN) return;
+        s.clientKey = AuthCrypto.readPublicKey(publicKey);
 
         LinkRecord r = store.get(uuid);
-        if (r == null || r.clientTokenHash == null || token.isEmpty() || !constantTimeEquals(sha256(token), r.clientTokenHash)) {
+        if (r == null || r.clientTokenHash == null || proof.isEmpty() || !AuthCrypto.constantTimeEquals(proof,
+                AuthCrypto.proofFromHash(r.clientTokenHash, store.serverId(), uuid, s.nonce))) {
             startOAuth(player, s, "");
             return;
         }
@@ -306,29 +317,36 @@ public final class AuthManager {
             r.refreshToken = tokens.refreshToken();
             r.accessTokenExpiresAt = tokens.expiresAtMillis();
         }
+        // The new token comes from a key agreement with the client's throwaway key, so it is never sent.
+        KeyPair serverKeys = AuthCrypto.newKeyPair();
+        String clientToken = s.clientKey == null ? null
+                : AuthCrypto.deriveToken(serverKeys.getPrivate(), s.clientKey, store.serverId(), uuid);
+        if (clientToken == null) {
+            kick(p, AuthConfig.MSG_KICK_BAD_CLIENT.get());
+            return new CallbackResult(false, "Error", AuthConfig.MSG_KICK_BAD_CLIENT.get());
+        }
         apply(r, new Sync(true, false, membership, null));
-        String clientToken = randomToken();
-        r.clientTokenHash = sha256(clientToken);
+        r.clientTokenHash = AuthCrypto.sha256Hex(clientToken);
         store.put(uuid, r);
         store.save();
 
-        String deny = finish(p, s, r, clientToken);
+        String deny = finish(p, s, r, serverKeys.getPublic().getEncoded());
         if (deny != null) return new CallbackResult(false, "No puedes entrar", deny);
         return new CallbackResult(true, "¡Listo, @" + user.username() + "!", "Ya puedes cerrar esta pestaña y volver a Minecraft.");
     }
 
     /** Lets the player in, or kicks them. Returns the kick reason, or null if they got in. */
     @Nullable
-    private String finish(ServerPlayer p, Session s, LinkRecord r, @Nullable String newClientToken) {
+    private String finish(ServerPlayer p, Session s, LinkRecord r, @Nullable byte[] newTokenKey) {
         String deny = denyReason(r);
         if (deny != null) {
             // Keep the new token anyway: once they get the role they can join without logging in again.
-            if (newClientToken != null) Network.sendTo(p, new AuthDonePacket(newClientToken));
+            if (newTokenKey != null) Network.sendTo(p, new AuthDonePacket(newTokenKey));
             kick(p, deny);
             return deny;
         }
         s.state = State.AUTHORIZED;
-        Network.sendTo(p, new AuthDonePacket(newClientToken == null ? "" : newClientToken));
+        Network.sendTo(p, new AuthDonePacket(newTokenKey == null ? new byte[0] : newTokenKey));
         refreshName(p);
         sendNameTagsTo(p);
         p.sendSystemMessage(Component.literal(RoleDisplay.legacy(placeholders(AuthConfig.MSG_LOGGED_IN.get(), r))));
@@ -477,6 +495,23 @@ public final class AuthManager {
         return r != null && r.clientTokenHash != null && hasAny(r.roles, bypass);
     }
 
+    /**
+     * Used by the PlayerList mixin while someone is joining. Returns why the join is refused when a player with the
+     * same UUID is online and has already logged in with Discord, or null to let vanilla handle it. If the one online
+     * hasn't logged in yet, the new connection still replaces it: otherwise an impostor could hold the name.
+     */
+    @Nullable
+    public static Component duplicateLoginReason(GameProfile profile) {
+        AuthManager m = instance;
+        if (m == null || !m.active() || profile.getId() == null) return null;
+        Session s = m.sessions.get(profile.getId());
+        if (s == null || s.state != State.AUTHORIZED) return null;
+        if (m.server.getPlayerList().getPlayer(profile.getId()) == null) return null;
+        LOGGER.info("Refused a second connection as {} ({}): that player is already online",
+                profile.getName(), profile.getId());
+        return Component.literal(RoleDisplay.legacy(AuthConfig.MSG_KICK_ALREADY_ONLINE.get()));
+    }
+
     /** Name with role prefix/color and a hover showing the Discord @, or null to leave it alone. */
     @Nullable
     public Component decorateName(ServerPlayer player, Component name, boolean forTab) {
@@ -592,17 +627,5 @@ public final class AuthManager {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private static String sha256(String s) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private static boolean constantTimeEquals(String a, String b) {
-        return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
     }
 }
