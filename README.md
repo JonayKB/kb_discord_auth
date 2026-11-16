@@ -143,6 +143,15 @@ Para administradores (permiso 3):
 | `/discordauth unlink <jugador>` | Borra el vínculo y lo expulsa si está conectado |
 | `/discordauth resync` | Vuelve a leer los roles del servidor de Discord y los de todos los conectados |
 
+### Roles en comandos y datapacks
+
+Cada rol de Discord del jugador se copia como tag de entidad `discord_role.<id del rol>`. Se ponen al iniciar sesión y se actualizan en cada sincronización de roles (también con `/discordauth resync`). Se guardan con el jugador, así que mientras está en la sala de espera o si Discord no responde se quedan los últimos conocidos.
+
+```mcfunction
+# Todos los conectados menos los que tienen el rol 1251246263395946517
+tag @a[tag=!discord_role.1251246263395946517] add participante
+```
+
 ## Cómo funciona
 
 ```
