@@ -39,6 +39,7 @@ Arranca el servidor una vez con el mod, páralo y edita `config/kb_discord_auth-
 [general]
 serverName = "KB Survival"   # sale en el tab ({server}) y en el ranking del bot
 limbo = true                 # sala de espera hasta iniciar sesión (ver «Servidores no premium»)
+limboPassThrough = ["ali"]   # mods cuyos paquetes no esperan al login (ver «Sala de espera»)
 
 [discord]
 clientId = "123456789012345678"
@@ -198,6 +199,7 @@ Con `online-mode=false` cualquiera puede entrar con cualquier nombre y la conexi
 - **Sala de espera.** Hasta iniciar sesión, el jugador está en una dimensión vacía (`kb_discord_auth:limbo`), sin su inventario. El cambio se hace al cargar sus datos, antes de que el cliente sepa dónde está, así que quien use el nombre de otro no ve su posición, su base ni lo que lleva, y los demás no lo ven a él. Al iniciar sesión vuelve a su sitio con todo.
   - Mientras espera **no se guarda**: si sale o el servidor se cae, su archivo conserva la posición y el inventario reales.
   - Los paquetes de otros mods (habilidades, mochilas…) esperan y se procesan al terminar el login, así que nadie los usa antes de identificarse y los mods que se sincronizan al entrar siguen funcionando.
+  - Excepción: los mods de `[general] limboPassThrough` (por defecto `["ali"]`, Advanced Loot Info) pasan al momento. Algunos mods congelan el cliente hasta que el servidor responde, y con el juego congelado no sale la pantalla de login. Añade aquí solo mods cuya respuesta no diga nada del jugador; vale el id del mod (`ali`) o un canal concreto (`ali:network`).
   - Si entra muerto, no puede reaparecer hasta iniciar sesión (reaparecería en su cama). Después vuelve a salir la pantalla de muerte.
   - Quien ya tiene token solo ve las pantallas de carga normales un momento.
   - Se puede apagar con `[general] limbo = false`; entonces se queda congelado donde entra, como antes.
