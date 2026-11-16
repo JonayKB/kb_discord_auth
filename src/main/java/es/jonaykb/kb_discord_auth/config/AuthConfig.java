@@ -14,6 +14,7 @@ public final class AuthConfig {
     public static final ForgeConfigSpec.BooleanValue ENABLED;
     public static final ForgeConfigSpec.BooleanValue ENABLE_IN_SINGLEPLAYER;
     public static final ForgeConfigSpec.BooleanValue LIMBO;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> LIMBO_PASS_THROUGH;
     public static final ForgeConfigSpec.IntValue LOGIN_TIMEOUT_SECONDS;
     public static final ForgeConfigSpec.IntValue MAX_ACCOUNTS_PER_DISCORD;
     public static final ForgeConfigSpec.ConfigValue<String> SERVER_NAME;
@@ -86,6 +87,10 @@ public final class AuthConfig {
         LIMBO = b.comment("While logging in, wait in an empty dimension with the inventory put aside, so someone using another",
                         "player's name can't see where they are or what they carry. Packets from other mods wait until the login ends.")
                 .define("limbo", true);
+        LIMBO_PASS_THROUGH = b.comment("Mods whose packets go through while waiting instead of waiting for the login: a mod id (\"ali\")",
+                        "or one channel (\"ali:network\"). Only for mods that freeze the client until the server answers and",
+                        "whose answer says nothing about the player, e.g. Advanced Loot Info (loot tables).")
+                .defineListAllowEmpty(List.of("limboPassThrough"), () -> List.of("ali"), AuthConfig::isChannel);
         LOGIN_TIMEOUT_SECONDS = b.comment("Seconds a player has to finish the Discord login before being kicked.")
                 .defineInRange("loginTimeoutSeconds", 300, 30, 3600);
         MAX_ACCOUNTS_PER_DISCORD = b.comment("How many Minecraft accounts can be linked to the same Discord account.")
@@ -238,6 +243,10 @@ public final class AuthConfig {
 
     private static boolean isSnowflake(Object o) {
         return o instanceof String s && s.matches("\\d{5,25}");
+    }
+
+    private static boolean isChannel(Object o) {
+        return o instanceof String s && s.matches("[a-z0-9_.-]+(:[a-z0-9_./-]+)?");
     }
 
     private static boolean isOrigin(Object o) {

@@ -255,12 +255,19 @@ public final class Limbo {
 
     /**
      * Network threads: true if a packet from another mod must wait until the login is done (it is kept and handled
-     * then). Vanilla, Forge and this mod's own packets always go through.
+     * then). Vanilla, Forge and this mod's own packets always go through, and so do the mods in
+     * {@code limboPassThrough}: some (Advanced Loot Info) freeze the client until the server answers, and a frozen
+     * client never shows the login screen.
      */
     public static boolean holdPacket(ServerPlayer player, ServerboundCustomPayloadPacket packet) {
-        String ns = packet.getIdentifier().getNamespace();
+        ResourceLocation id = packet.getIdentifier();
+        String ns = id.getNamespace();
         if (ns.equals("minecraft") || ns.equals("forge") || ns.equals("fml") || ns.equals(KbDiscordAuth.MOD_ID)) {
             return false;
+        }
+        String channel = id.toString();
+        for (String allowed : AuthConfig.LIMBO_PASS_THROUGH.get()) {
+            if (allowed.equals(ns) || allowed.equals(channel)) return false;
         }
         if (!applies(player)) return false;
         if (player.hasDisconnected()) return true;
