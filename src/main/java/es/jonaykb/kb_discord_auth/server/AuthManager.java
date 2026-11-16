@@ -562,9 +562,30 @@ public final class AuthManager {
 
     /** Re-applies the role look of a logged-in player: chat name, tab list and, for everyone, the name tag color. */
     private void refreshName(ServerPlayer p) {
+        syncRoleTags(p);
         p.refreshDisplayName();
         p.refreshTabListName();
         Network.sendToAll(new NameTagColorPacket(p.getUUID(), nameTagColor(p.getUUID())));
+    }
+
+    /** Prefix of the entity tags that mirror the player's Discord roles, e.g. {@code discord_role.1234}. */
+    public static final String ROLE_TAG_PREFIX = "discord_role.";
+
+    /**
+     * Mirrors the cached Discord roles as entity tags so datapacks and commands can use them
+     * ({@code @a[tag=!discord_role.<id>]}). Tags are saved with the player, so the last known roles stay
+     * while they are in the waiting room or when Discord cannot be reached.
+     */
+    private void syncRoleTags(ServerPlayer p) {
+        LinkRecord r = store.get(p.getUUID());
+        List<String> wanted = new ArrayList<>();
+        if (r != null && r.inGuild) {
+            for (String role : r.roles) wanted.add(ROLE_TAG_PREFIX + role);
+        }
+        for (String tag : List.copyOf(p.getTags())) {
+            if (tag.startsWith(ROLE_TAG_PREFIX) && !wanted.contains(tag)) p.removeTag(tag);
+        }
+        for (String tag : wanted) p.addTag(tag);
     }
 
     /** Sends a player who just logged in the name tag colors of everyone already online. */
