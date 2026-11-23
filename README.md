@@ -8,7 +8,7 @@ Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión c
 - **Roles en el chat y en el tab (solo visual).** Se toman de Discord con su nombre, color y orden. Se puede mostrar solo el más alto o todos, y excluir roles.
 - **Color del rol sobre la cabeza.** El nombre encima del jugador toma el color de su rol, sin el prefijo.
 - **Hover en el chat.** Al pasar el ratón por el nombre se ve el `@` de Discord.
-- **Foto de perfil de Discord** redonda a la izquierda del nombre en el chat, y en el tab delante de la cabeza de la skin.
+- **Foto de perfil de Discord** redonda a la izquierda del nombre en el chat, y en el tab delante de la cabeza de la skin. También con [Chat Plus](https://modrinth.com/mod/chat-plus), que dibuja el chat a su manera (conviene apagar su `playerHeadChatDisplayEnabled` para no ver dos cabezas).
 - **Rol obligatorio.** Sin alguno de los roles configurados no se entra.
 - **Plaza reservada.** Un rol puede entrar aunque el servidor esté lleno.
 - **Tab con estadísticas.** Arriba, el nombre del servidor y los jugadores conectados. Abajo, cada jugador ve las suyas: tiempo jugado, muertes, mobs matados, distancia y logros.

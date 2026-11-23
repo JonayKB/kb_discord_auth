@@ -17,6 +17,7 @@
   "client": [
     "client.FontMixin",
     "client.ChatComponentMixin",
-    "client.PlayerTabOverlayMixin"
+    "client.PlayerTabOverlayMixin",
+    "client.ChatPlusGraphicsUtilMixin"
   ]
 }
