@@ -13,16 +13,25 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.PlayerFaceRenderer;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
+import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Tab list: [avatar][skin head][name]. The name starts with a 10px avatar marker. When the skin head is shown
- * (online-mode servers), the head moves into the marker's gap and the avatar takes the head's place.
- * Otherwise the avatar is simply drawn over the marker.
+ * Tab list: [avatar][skin head][name]. The name starts with a 10px avatar marker. The head moves into the marker's
+ * gap and the avatar takes the head's place. Names without a marker keep the head where it was.
  */
 @Mixin(PlayerTabOverlay.class)
 public abstract class PlayerTabOverlayMixin {
+    /**
+     * Vanilla only draws skin heads when the connection is encrypted, which never happens with
+     * {@code online-mode=false}. The skins themselves are fine there (SkinRestorer…), so always draw them.
+     */
+    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/Connection;isEncrypted()Z"))
+    private boolean kbDiscordAuth$alwaysShowHeads(Connection connection) {
+        return true;
+    }
+
     @Unique
     private record PendingFace(GuiGraphics g, ResourceLocation skin, int x, int y, int size, boolean hat, boolean upsideDown) {
         void draw(int atX) {
