@@ -8,7 +8,7 @@ Mod de Forge para **Minecraft 1.20.1** (Forge 47) que obliga a iniciar sesión c
 - **Roles en el chat y en el tab (solo visual).** Se toman de Discord con su nombre, color y orden. Se puede mostrar solo el más alto o todos, y excluir roles.
 - **Color del rol sobre la cabeza.** El nombre encima del jugador toma el color de su rol, sin el prefijo.
 - **Hover en el chat.** Al pasar el ratón por el nombre se ve el `@` de Discord.
-- **Foto de perfil de Discord** redonda a la izquierda del nombre en el chat, y en el tab delante de la cabeza de la skin. También con [Chat Plus](https://modrinth.com/mod/chat-plus), que dibuja el chat a su manera (conviene apagar su `playerHeadChatDisplayEnabled` para no ver dos cabezas).
+- **Foto de perfil de Discord** redonda a la izquierda del nombre en el chat, y en el tab delante de la cabeza de la skin. También con [Chat Plus](https://modrinth.com/mod/chat-plus), que dibuja el chat a su manera (con su `playerHeadChatDisplayEnabled` se ve también la cabeza de la skin, delante de la foto).
 - **Rol obligatorio.** Sin alguno de los roles configurados no se entra.
 - **Plaza reservada.** Un rol puede entrar aunque el servidor esté lleno.
 - **Tab con estadísticas.** Arriba, el nombre del servidor y los jugadores conectados. Abajo, cada jugador ve las suyas: tiempo jugado, muertes, mobs matados, distancia y logros.
@@ -115,7 +115,7 @@ El nombre toma el color del rol más alto que se muestre y tenga color, como en 
 
 Sin `botToken` (o con `automaticRoles = false`) solo se ven los roles de la lista `roles`, en el orden de la lista.
 
-Cada cliente descarga las fotos de perfil directamente de `cdn.discordapp.com`. Si alguien no tiene foto, o no carga, se ve el avatar por defecto de Discord. La foto se actualiza con cada sincronización de roles. En los servidores no premium (`online-mode=false`) Minecraft no dibuja las cabezas en el tab, así que ahí solo se ve la foto de Discord.
+Cada cliente descarga las fotos de perfil directamente de `cdn.discordapp.com`. Si alguien no tiene foto, o no carga, se ve el avatar por defecto de Discord. La foto se actualiza con cada sincronización de roles. Minecraft solo dibuja las cabezas de la skin en el tab si la conexión va cifrada, y en los servidores no premium (`online-mode=false`) no lo va: el mod las dibuja igualmente, con la skin que el jugador tiene en el servidor (la de SkinRestorer, por ejemplo).
 
 La distancia suma andar, correr, nadar, escalar, élitros y montar, pero no el vuelo en creativo ni las caídas. Los logros cuentan solo los que salen en la pantalla de logros (no las recetas). Al bot no se envían los jugadores que aún no han iniciado sesión con Discord.
 
